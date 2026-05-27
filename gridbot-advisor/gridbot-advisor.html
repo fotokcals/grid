@@ -787,6 +787,16 @@ function renderResult(data) {
     document.getElementById('gridHigh').textContent = (!gp.high || gp.high === 0) ? '∞' : '$' + parseFloat(gp.high).toFixed(2);
     document.getElementById('gridCount').textContent = gp.grids ? gp.grids + ' grids' : '—';
     document.getElementById('gridSpacing').textContent = gp.spacing ? '$' + gp.spacing : '—';
+    // rangeNote
+    let noteEl = document.getElementById('gridRangeNote');
+    if (!noteEl) {
+      noteEl = document.createElement('div');
+      noteEl.id = 'gridRangeNote';
+      noteEl.style.cssText = 'margin-top:10px;font-family:var(--mono);font-size:10px;color:var(--muted);padding:7px 10px;border-radius:7px;background:var(--s1);border:1px solid var(--border);line-height:1.5;';
+      document.getElementById('gridConfig').appendChild(noteEl);
+    }
+    noteEl.textContent = gp.rangeNote ? '📐 ' + gp.rangeNote : '';
+    noteEl.style.display = gp.rangeNote ? 'block' : 'none';
     document.getElementById('gridConfig').style.display = 'block';
   }
 
@@ -953,8 +963,9 @@ TAREA:
   "gridParams": {
     "low": 142.00,
     "high": 195.00,
-    "grids": 30,
-    "spacing": "1.77"
+    "grids": 15,
+    "spacing": "1.77",
+    "rangeNote": "explicación del ajuste, ej: Ampliado a ±10% por CPI Jun 11"
   },
   "technicals": {
     "rsi14": 54,
@@ -1007,10 +1018,25 @@ Reglas para transitionTrigger — MUY IMPORTANTE, evalúa con cuidado:
     "MANTENER" si conditionsMet <= 1 → mercado lateral o bajista, Grid Normal es correcto
 - action: mensaje claro y directo. Si CAMBIAR, escribe exactamente qué hacer: "Apaga Grid Normal → Abre Infinity Grid con límite inferior en $X"
 
-Reglas para gridParams (optimizado para gestión activa cada 2 días):
-- Grid Normal: low = precio_actual × 0.92, high = precio_actual × 1.08, grids = 15, spacing = (high-low)/15 redondeado a 2 decimales. SOLO si el soporte técnico más cercano está por debajo del low calculado, ajusta el low a ese soporte.
-- Infinity Grid: low = soporte más cercano o EMA50 (el más alto de los dos), high = 0 (sin techo), grids = 15, spacing = "2.5%"
-- En ambos casos spacing = (high - low) / grids redondeado a 2 decimales
+Reglas para gridParams (optimizado para gestión activa cada 2 días, ajustado por contexto):
+
+PASO A — Define el rango base según contexto macro:
+  - Sin eventos macro en los próximos 5 días → rango base ±8%  (low = precio×0.92, high = precio×1.08)
+  - Evento macro MEDIO en 2-5 días (CPI, NFP)  → rango base ±10% (low = precio×0.90, high = precio×1.10)
+  - Evento macro ALTO en < 3 días (FOMC, CPI sorpresa) → rango base ±12% (low = precio×0.88, high = precio×1.12)
+  - Régimen BAJISTA confirmado → rango asimétrico: low = precio×0.88, high = precio×1.05 (más espacio abajo)
+
+PASO B — Ajusta los límites con técnicos:
+  - Si hay soporte técnico fuerte entre el low-base y precio×0.95 → ancla el low en ese soporte
+  - Si hay resistencia fuerte entre precio×1.03 y el high-base → ancla el high en esa resistencia
+  - Si RSI > 70 (sobrecomprado) → baja el high al nivel de resistencia más cercano por encima del precio
+  - Si RSI < 30 (sobrevendido)  → sube el low al soporte más cercano por encima del low-base
+
+PASO C — Define grids:
+  - Grid Normal: grids = 15, spacing = (high-low)/15 redondeado a 2 decimales
+  - Infinity Grid: low = soporte más cercano o EMA50 (el mayor), high = 0 (sin techo), grids = 15, spacing = "2.5%"
+
+PASO D — Añade campo "rangeNote" con 1 línea explicando por qué ajustaste el rango (ej: "Ampliado a ±10% por CPI el Jun 11" o "High bajado a $178 por resistencia + RSI 72")
 
 Responde SOLO el JSON.`;
 
