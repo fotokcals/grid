@@ -1,0 +1,1234 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Grid Bot Advisor v2</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:ital,wght@0,400;0,500;1,400&family=Outfit:wght@300;400;500;600;700&display=swap');
+
+:root {
+  --bg: #060709;
+  --s1: #0c0e13;
+  --s2: #12151d;
+  --s3: #181c26;
+  --border: #1a1f2e;
+  --border2: #222840;
+  --green: #05f5a0;
+  --gd: #05f5a012;
+  --gb: #05f5a030;
+  --red: #ff3355;
+  --rd: #ff335512;
+  --rb: #ff335530;
+  --yellow: #ffcc00;
+  --yd: #ffcc0012;
+  --yb: #ffcc0030;
+  --blue: #38b6ff;
+  --text: #c8d4e8;
+  --muted: #3d4a62;
+  --dim: #232b3d;
+  --mono: 'DM Mono', monospace;
+  --display: 'Bebas Neue', sans-serif;
+  --body: 'Outfit', sans-serif;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--body);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events: none; z-index: 0; opacity: .4;
+}
+
+.app { position: relative; z-index: 1; max-width: 520px; margin: 0 auto; padding: 28px 16px 80px; }
+
+/* HEADER */
+.header { margin-bottom: 24px; }
+.logo-row { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+.logo-icon {
+  width: 42px; height: 42px; border-radius: 10px;
+  background: linear-gradient(135deg, #05f5a015, #38b6ff15);
+  border: 1px solid var(--gb);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px;
+}
+.logo-text { font-family: var(--display); font-size: 26px; letter-spacing: .06em; color: var(--text); }
+.logo-text span { color: var(--green); }
+.version-tag {
+  margin-left: auto;
+  font-family: var(--mono); font-size: 9px;
+  color: var(--green); letter-spacing: .15em; text-transform: uppercase;
+  padding: 3px 8px; border-radius: 4px;
+  border: 1px solid var(--gb); background: var(--gd);
+}
+.pair-row { display: flex; align-items: center; gap: 10px; }
+.pair-badge {
+  font-family: var(--mono); font-size: 11px; font-weight: 500;
+  color: var(--blue); background: #38b6ff12; border: 1px solid #38b6ff25;
+  padding: 4px 10px; border-radius: 6px;
+}
+.capital-badge {
+  font-family: var(--mono); font-size: 11px;
+  color: var(--muted); background: var(--s1); border: 1px solid var(--border);
+  padding: 4px 10px; border-radius: 6px;
+}
+.time-badge { margin-left: auto; font-family: var(--mono); font-size: 10px; color: var(--muted); }
+
+/* SCHEDULED PANEL */
+.schedule-panel {
+  background: var(--s1); border: 1px solid var(--border2);
+  border-radius: 16px; padding: 14px 16px; margin-bottom: 16px;
+}
+.schedule-row { display: flex; align-items: center; gap: 10px; }
+.schedule-next-label {
+  font-family: var(--mono); font-size: 9px; text-transform: uppercase;
+  letter-spacing: .12em; color: var(--muted); margin-bottom: 6px;
+}
+.schedule-slots { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.schedule-slot {
+  display: flex; align-items: center; gap: 8px;
+  padding: 9px 12px; border-radius: 10px; border: 1px solid var(--border);
+  background: var(--s2); cursor: pointer; transition: all .2s;
+}
+.schedule-slot:hover { border-color: var(--border2); }
+.schedule-slot.active-now { border-color: var(--gb); background: var(--gd); }
+.schedule-slot-icon { font-size: 18px; }
+.schedule-slot-info { flex: 1; }
+.schedule-slot-time { font-family: var(--mono); font-size: 12px; font-weight: 600; }
+.schedule-slot-time.morning { color: var(--green); }
+.schedule-slot-time.night { color: var(--blue); }
+.schedule-slot-countdown {
+  font-family: var(--mono); font-size: 9px; color: var(--muted);
+  margin-top: 2px; letter-spacing: .05em;
+}
+.schedule-slot-countdown.now { color: var(--yellow); font-weight: 600; }
+
+/* LAST RESULT NOTICE */
+.last-result-bar {
+  display: none; align-items: center; gap: 10px;
+  background: var(--s1); border: 1px solid var(--border);
+  border-radius: 10px; padding: 10px 14px; margin-bottom: 14px;
+  font-family: var(--mono); font-size: 10px; color: var(--muted);
+}
+.last-result-bar.visible { display: flex; }
+.last-result-signal {
+  font-weight: 700; padding: 2px 8px; border-radius: 5px;
+  font-size: 10px; text-transform: uppercase;
+}
+.last-result-signal.ON { color: var(--green); background: var(--gd); border: 1px solid var(--gb); }
+.last-result-signal.OFF { color: var(--red); background: var(--rd); border: 1px solid var(--rb); }
+.last-result-signal.PRECAUCION { color: var(--yellow); background: var(--yd); border: 1px solid var(--yb); }
+.restore-btn {
+  margin-left: auto; font-family: var(--mono); font-size: 9px;
+  color: var(--blue); cursor: pointer; text-decoration: underline;
+  letter-spacing: .05em; background: none; border: none; padding: 0;
+}
+
+/* SNAPSHOT */
+.snapshot { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px; }
+.snap-card { background: var(--s1); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; }
+.snap-label { font-family: var(--mono); font-size: 9px; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); margin-bottom: 5px; }
+.snap-val { font-size: 20px; font-weight: 700; line-height: 1; }
+.snap-change { font-family: var(--mono); font-size: 10px; margin-top: 3px; }
+.snap-change.up { color: var(--green); }
+.snap-change.down { color: var(--red); }
+.snap-change.flat { color: var(--muted); }
+
+/* SIGNAL CARD */
+.signal-card {
+  border-radius: 20px; padding: 28px 24px; margin-bottom: 16px;
+  border: 1px solid var(--border); background: var(--s1);
+  position: relative; overflow: hidden; transition: all .4s ease;
+}
+.signal-card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--accent-color, var(--green)), transparent);
+  opacity: 0; transition: opacity .4s;
+}
+.signal-card.loaded::before { opacity: 1; }
+.signal-card-bg { position: absolute; inset: 0; border-radius: 20px; opacity: 0; transition: opacity .5s; }
+.signal-card.loaded .signal-card-bg { opacity: 1; }
+
+.idle-state { text-align: center; padding: 20px 0; }
+.idle-icon { font-size: 48px; margin-bottom: 16px; opacity: .4; }
+.idle-text { font-family: var(--mono); font-size: 12px; color: var(--muted); line-height: 1.8; }
+
+.loading-state { display: none; text-align: center; padding: 20px 0; }
+.loading-ring {
+  width: 48px; height: 48px; margin: 0 auto 16px;
+  border-radius: 50%; border: 2px solid var(--border2);
+  border-top-color: var(--green);
+  animation: spin 1s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-steps { font-family: var(--mono); font-size: 11px; color: var(--muted); line-height: 2; }
+.loading-step { opacity: .3; transition: opacity .3s; }
+.loading-step.active { opacity: 1; color: var(--green); }
+.loading-step.done { opacity: .6; color: var(--text); }
+
+.result-state { display: none; }
+
+.signal-main { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 20px; }
+.signal-emoji { font-size: 52px; line-height: 1; flex-shrink: 0; }
+.signal-right { flex: 1; }
+.signal-action { font-family: var(--display); font-size: 44px; line-height: 1; letter-spacing: .04em; margin-bottom: 4px; }
+.signal-action.on { color: var(--green); }
+.signal-action.off { color: var(--red); }
+.signal-action.cau { color: var(--yellow); }
+.signal-grid-type { font-family: var(--mono); font-size: 12px; font-weight: 500; letter-spacing: .1em; text-transform: uppercase; }
+.signal-grid-type.inf { color: var(--blue); }
+.signal-grid-type.nor { color: var(--yellow); }
+.signal-grid-type.off { color: var(--muted); }
+
+.signal-summary {
+  font-size: 14px; line-height: 1.6; color: var(--text);
+  padding: 14px 16px; border-radius: 12px;
+  background: var(--s2); border: 1px solid var(--border); margin-bottom: 16px;
+}
+
+.timer-block { background: var(--s2); border: 1px solid var(--border2); border-radius: 12px; padding: 14px 16px; margin-bottom: 16px; }
+.timer-label { font-family: var(--mono); font-size: 9px; text-transform: uppercase; letter-spacing: .15em; color: var(--muted); margin-bottom: 10px; }
+.timer-row { display: flex; align-items: center; gap: 10px; }
+.timer-icon { font-size: 18px; }
+.timer-text { font-size: 13px; font-weight: 500; flex: 1; line-height: 1.4; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; }
+.timer-badge { font-family: var(--mono); font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 8px; white-space: nowrap; }
+.timer-badge.on { background: var(--gd); color: var(--green); border: 1px solid var(--gb); }
+.timer-badge.off { background: var(--rd); color: var(--red); border: 1px solid var(--rb); }
+.timer-badge.cau { background: var(--yd); color: var(--yellow); border: 1px solid var(--yb); }
+
+.news-section { margin-bottom: 16px; }
+.news-section-label { font-family: var(--mono); font-size: 9px; text-transform: uppercase; letter-spacing: .15em; color: var(--muted); margin-bottom: 8px; }
+.news-item { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: 10px; margin-bottom: 6px; border: 1px solid transparent; font-size: 13px; line-height: 1.5; }
+.news-item.neg { background: var(--rd); border-color: var(--rb); }
+.news-item.pos { background: var(--gd); border-color: var(--gb); }
+.news-item.neu { background: var(--s2); border-color: var(--border); color: var(--muted); }
+.news-item-icon { flex-shrink: 0; font-size: 14px; margin-top: 1px; }
+
+.confidence-row { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 10px; background: var(--s2); border: 1px solid var(--border); }
+.conf-label { font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); }
+.conf-bar { flex: 1; height: 4px; background: var(--border2); border-radius: 2px; overflow: hidden; }
+.conf-fill { height: 100%; border-radius: 2px; background: var(--green); transition: width 1s ease; }
+.conf-val { font-family: var(--mono); font-size: 12px; font-weight: 700; color: var(--green); min-width: 36px; text-align: right; }
+
+/* BUTTONS */
+.btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+.btn {
+  padding: 14px 0; border-radius: 14px;
+  font-family: var(--mono); font-size: 11px; font-weight: 500;
+  letter-spacing: .1em; text-transform: uppercase;
+  cursor: pointer; border: 1px solid; transition: all .2s;
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+}
+.btn:disabled { opacity: .4; cursor: not-allowed; transform: none !important; }
+.btn-sub { font-size: 9px; letter-spacing: .05em; opacity: .6; font-style: italic; text-transform: none; }
+.btn-morning { background: linear-gradient(135deg, #05f5a008, #38b6ff08); border-color: var(--gb); color: var(--green); }
+.btn-morning:hover:not(:disabled) { background: linear-gradient(135deg, #05f5a015, #38b6ff15); transform: translateY(-1px); }
+.btn-night { background: linear-gradient(135deg, #38b6ff08, #a78bfa08); border-color: #38b6ff30; color: var(--blue); }
+.btn-night:hover:not(:disabled) { background: linear-gradient(135deg, #38b6ff15, #a78bfa15); transform: translateY(-1px); }
+.btn-full {
+  width: 100%; padding: 15px; border-radius: 14px; margin-bottom: 16px;
+  background: linear-gradient(135deg, #05f5a015, #38b6ff10);
+  border: 1px solid var(--gb); color: var(--green);
+  font-family: var(--mono); font-size: 12px; font-weight: 500;
+  letter-spacing: .1em; text-transform: uppercase; cursor: pointer;
+  transition: all .2s; display: flex; align-items: center; justify-content: center; gap: 10px;
+}
+.btn-full:hover:not(:disabled) { background: linear-gradient(135deg, #05f5a022, #38b6ff18); transform: translateY(-1px); }
+.btn-full:disabled { opacity: .4; cursor: not-allowed; transform: none; }
+
+/* REGIME / RISK / SCORE BADGES */
+.regime-badge, .risk-badge, .score-badge {
+  font-family: var(--mono); font-size: 9px; text-transform: uppercase;
+  letter-spacing: .1em; padding: 3px 8px; border-radius: 5px; border: 1px solid;
+}
+.regime-badge { color: var(--blue); background: #38b6ff12; border-color: #38b6ff30; }
+.risk-badge.low { color: var(--green); background: var(--gd); border-color: var(--gb); }
+.risk-badge.med { color: var(--yellow); background: var(--yd); border-color: var(--yb); }
+.risk-badge.high { color: var(--red); background: var(--rd); border-color: var(--rb); }
+.score-badge { color: #a78bfa; background: #a78bfa12; border-color: #a78bfa30; }
+
+.shutdown-block { background: #ff335508; border: 1px solid var(--rb); border-radius: 12px; padding: 12px 14px; margin-bottom: 14px; }
+.shutdown-text { font-family: var(--mono); font-size: 11px; color: var(--red); line-height: 1.7; margin-top: 6px; }
+
+/* GRID CONFIG */
+.grid-config { background: var(--s2); border: 1px solid var(--border2); border-radius: 12px; padding: 14px 16px; margin-bottom: 16px; }
+.grid-range-row { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 12px; }
+.range-side { display: flex; flex-direction: column; }
+.range-side.right { align-items: flex-end; }
+.range-lbl { font-family: var(--mono); font-size: 9px; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); margin-bottom: 4px; }
+.range-val { font-family: var(--display); font-size: 30px; letter-spacing: .04em; line-height: 1; }
+.range-arrow { font-family: var(--mono); font-size: 20px; color: var(--border2); padding-bottom: 4px; }
+.grid-stats-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.gstat { background: var(--s1); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; }
+.gstat-lbl { font-family: var(--mono); font-size: 9px; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); margin-bottom: 4px; }
+.gstat-val { font-family: var(--mono); font-size: 15px; font-weight: 700; color: var(--text); }
+
+/* TECHNICALS */
+.tech-card { background: var(--s2); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; margin-bottom: 16px; }
+.tech-row { display: flex; align-items: center; gap: 8px; padding: 7px 0; border-bottom: 1px solid var(--border); }
+.tech-row:last-child { border-bottom: none; }
+.tech-name { font-family: var(--mono); font-size: 10px; color: var(--muted); width: 72px; flex-shrink: 0; }
+.tech-val { font-family: var(--mono); font-size: 11px; font-weight: 600; flex: 1; }
+.tech-badge { font-family: var(--mono); font-size: 9px; text-transform: uppercase; padding: 2px 7px; border-radius: 4px; white-space: nowrap; }
+.tech-badge.bull { background: var(--gd); color: var(--green); border: 1px solid var(--gb); }
+.tech-badge.bear { background: var(--rd); color: var(--red); border: 1px solid var(--rb); }
+.tech-badge.neu { background: var(--s1); color: var(--muted); border: 1px solid var(--border); }
+.rsi-wrap { flex: 1; display: flex; align-items: center; gap: 6px; }
+.rsi-track { flex: 1; height: 4px; background: var(--border2); border-radius: 2px; position: relative; }
+.rsi-thumb { position: absolute; top: -3px; width: 10px; height: 10px; border-radius: 50%; transform: translateX(-50%); border: 2px solid var(--s2); }
+
+/* BREAKOUT WARNING */
+.breakout-card { border-radius: 12px; padding: 14px 16px; margin-bottom: 16px; border: 1px solid var(--border2); background: var(--s2); }
+.breakout-card.alto { border-color: #ff6b0050; background: linear-gradient(135deg, #ff335508, #ffcc0006); animation: breakoutPulse 2.5s ease-in-out infinite; }
+.breakout-card.medio { border-color: var(--yb); background: linear-gradient(135deg, var(--s2), #ffcc0006); }
+@keyframes breakoutPulse { 0%,100% { border-color: #ff6b0050; } 50% { border-color: #ff6b00aa; box-shadow: 0 0 12px #ff6b0020; } }
+.breakout-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.breakout-title { font-family: var(--mono); font-size: 9px; text-transform: uppercase; letter-spacing: .15em; color: var(--muted); }
+.breakout-risk { font-family: var(--mono); font-size: 10px; font-weight: 700; padding: 3px 10px; border-radius: 6px; text-transform: uppercase; letter-spacing: .08em; }
+.breakout-risk.alto { background: #ff6b0020; color: #ff6b00; border: 1px solid #ff6b0050; }
+.breakout-risk.medio { background: var(--yd); color: var(--yellow); border: 1px solid var(--yb); }
+.breakout-risk.bajo { background: var(--s1); color: var(--muted); border: 1px solid var(--border); }
+.breakout-conds { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-bottom: 10px; }
+.bcond { display: flex; flex-direction: column; align-items: center; gap: 5px; padding: 8px 6px; border-radius: 8px; text-align: center; font-family: var(--mono); font-size: 9px; text-transform: uppercase; letter-spacing: .06em; border: 1px solid transparent; }
+.bcond.ok { background: #ff6b0015; border-color: #ff6b0040; color: #ff9500; }
+.bcond.fail { background: var(--s1); border-color: var(--border); color: var(--muted); opacity: .5; }
+.bcond-icon { font-size: 16px; }
+.breakout-dir { display: flex; align-items: center; gap: 8px; padding: 7px 10px; border-radius: 8px; background: var(--s1); border: 1px solid var(--border); font-family: var(--mono); font-size: 10px; margin-bottom: 8px; }
+.breakout-note { font-family: var(--mono); font-size: 10px; line-height: 1.6; color: var(--text); padding: 8px 10px; border-radius: 8px; background: var(--s1); border: 1px solid var(--border); }
+.breakout-note.alto { color: #ff9500; border-color: #ff6b0040; background: #ff6b0010; }
+
+/* TRANSITION TRIGGER */
+.trigger-card { border-radius: 12px; padding: 14px 16px; margin-bottom: 16px; border: 1px solid var(--border2); background: var(--s2); transition: border-color .3s; }
+.trigger-card.cambiar { border-color: var(--gb); background: linear-gradient(135deg, var(--s2), #05f5a006); }
+.trigger-card.vigilar { border-color: var(--yb); background: linear-gradient(135deg, var(--s2), #ffcc0006); }
+.trigger-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.trigger-title { font-family: var(--mono); font-size: 9px; text-transform: uppercase; letter-spacing: .15em; color: var(--muted); }
+.trigger-badge { font-family: var(--mono); font-size: 10px; font-weight: 700; padding: 4px 12px; border-radius: 8px; letter-spacing: .08em; text-transform: uppercase; }
+.trigger-badge.cambiar { background: var(--gd); color: var(--green); border: 1px solid var(--gb); }
+.trigger-badge.vigilar { background: var(--yd); color: var(--yellow); border: 1px solid var(--yb); }
+.trigger-badge.mantener { background: var(--s1); color: var(--muted); border: 1px solid var(--border); }
+.trigger-conditions { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 12px; }
+.trigger-cond { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 8px; font-size: 12px; border: 1px solid transparent; }
+.trigger-cond.ok { background: var(--gd); border-color: var(--gb); }
+.trigger-cond.fail { background: var(--s1); border-color: var(--border); opacity: .6; }
+.trigger-cond-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.trigger-cond.ok .trigger-cond-dot { background: var(--green); box-shadow: 0 0 5px var(--green); }
+.trigger-cond.fail .trigger-cond-dot { background: var(--muted); }
+.trigger-cond-text { font-size: 11px; line-height: 1.3; }
+.trigger-progress { height: 4px; background: var(--border2); border-radius: 2px; overflow: hidden; margin-bottom: 8px; }
+.trigger-progress-fill { height: 100%; border-radius: 2px; transition: width .8s ease; }
+.trigger-action { font-family: var(--mono); font-size: 11px; color: var(--text); text-align: center; padding: 8px; border-radius: 8px; background: var(--s1); border: 1px solid var(--border); }
+
+/* ERROR */
+.error-state { display: none; text-align: center; padding: 20px 0; font-family: var(--mono); font-size: 12px; color: var(--red); line-height: 1.8; }
+
+/* EVENTS */
+.events-card { background: var(--s1); border: 1px solid var(--border); border-radius: 16px; padding: 18px; margin-bottom: 16px; }
+.events-title { font-family: var(--mono); font-size: 9px; text-transform: uppercase; letter-spacing: .15em; color: var(--muted); margin-bottom: 12px; }
+.event-row { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--border); }
+.event-row:last-child { border-bottom: none; }
+.event-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.event-dot.high { background: var(--red); box-shadow: 0 0 6px var(--red); }
+.event-dot.med { background: var(--yellow); }
+.event-dot.low { background: var(--muted); }
+.event-name { font-size: 13px; flex: 1; }
+.event-date { font-family: var(--mono); font-size: 10px; color: var(--muted); }
+.event-impact { font-family: var(--mono); font-size: 9px; text-transform: uppercase; padding: 2px 7px; border-radius: 4px; }
+.event-impact.high { background: var(--rd); color: var(--red); }
+.event-impact.med { background: var(--yd); color: var(--yellow); }
+.event-impact.low { background: var(--s2); color: var(--muted); }
+
+/* FOOTER */
+.footer { text-align: center; margin-top: 28px; font-family: var(--mono); font-size: 9px; color: var(--muted); letter-spacing: .1em; line-height: 2; }
+.footer span { color: var(--dim); }
+.gemini-badge { display: inline-flex; align-items: center; gap: 5px; font-family: var(--mono); font-size: 9px; color: #a78bfa; background: #a78bfa12; border: 1px solid #a78bfa30; padding: 3px 9px; border-radius: 5px; margin-top: 6px; }
+
+/* ANIMATIONS */
+.fade-in { animation: fadeIn .5s ease forwards; }
+@keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+.result-item { opacity: 0; animation: fadeIn .4s ease forwards; }
+.result-item:nth-child(1) { animation-delay: .1s; }
+.result-item:nth-child(2) { animation-delay: .2s; }
+.result-item:nth-child(3) { animation-delay: .3s; }
+.result-item:nth-child(4) { animation-delay: .4s; }
+.result-item:nth-child(5) { animation-delay: .5s; }
+.result-item:nth-child(6) { animation-delay: .6s; }
+.result-item:nth-child(7) { animation-delay: .7s; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="logo-row">
+      <div class="logo-icon">⚡</div>
+      <div class="logo-text">GRID<span>BOT</span> ADVISOR</div>
+      <div class="version-tag">v2.0</div>
+    </div>
+    <div class="pair-row">
+      <div class="pair-badge">SOL/USDT</div>
+      <div class="capital-badge">$500 · 1x</div>
+      <div class="time-badge" id="currentTime">—</div>
+    </div>
+  </div>
+
+  <!-- Scheduled consultations panel -->
+  <div class="schedule-panel">
+    <div class="schedule-next-label">📅 Consultas programadas · CDMX</div>
+    <div class="schedule-slots">
+      <div class="schedule-slot" id="morningSlot" onclick="analyze('morning')">
+        <div class="schedule-slot-icon">🌅</div>
+        <div class="schedule-slot-info">
+          <div class="schedule-slot-time morning">7:00 AM</div>
+          <div class="schedule-slot-countdown" id="morningCountdown">—</div>
+        </div>
+      </div>
+      <div class="schedule-slot" id="nightSlot" onclick="analyze('night')">
+        <div class="schedule-slot-icon">🌙</div>
+        <div class="schedule-slot-info">
+          <div class="schedule-slot-time night">9:00 PM</div>
+          <div class="schedule-slot-countdown" id="nightCountdown">—</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Last result restore bar -->
+  <div class="last-result-bar" id="lastResultBar">
+    <span>Última consulta:</span>
+    <span class="last-result-signal" id="lastResultSignal">—</span>
+    <span id="lastResultTime" style="flex:1;">—</span>
+    <button class="restore-btn" onclick="restoreLastResult()">restaurar →</button>
+  </div>
+
+  <!-- Market snapshot -->
+  <div class="snapshot">
+    <div class="snap-card">
+      <div class="snap-label">SOL Price <span id="priceTimestamp" style="color:var(--muted);font-size:8px;margin-left:4px;">cargando...</span></div>
+      <div class="snap-val" id="solPrice">$—</div>
+      <div class="snap-change flat" id="solChange">—</div>
+    </div>
+    <div class="snap-card">
+      <div class="snap-label">BTC Price</div>
+      <div class="snap-val" id="btcPrice">$—</div>
+      <div class="snap-change flat" id="btcChange">—</div>
+    </div>
+  </div>
+
+  <!-- Main signal card -->
+  <div class="signal-card" id="signalCard">
+    <div class="signal-card-bg" id="cardBg"></div>
+
+    <div class="idle-state" id="idleState">
+      <div class="idle-icon">🤖</div>
+      <div class="idle-text">
+        Toca <strong style="color:var(--text)">7:00 AM</strong> para la consulta matutina<br>
+        o <strong style="color:var(--text)">9:00 PM</strong> para la revisión nocturna.<br>
+        <span style="font-size:10px;opacity:.6;">Gemini Flash + Google Search · Gratis</span>
+      </div>
+    </div>
+
+    <div class="loading-state" id="loadingState">
+      <div class="loading-ring"></div>
+      <div class="loading-steps">
+        <div class="loading-step" id="step1">⬜ Obteniendo precios en tiempo real...</div>
+        <div class="loading-step" id="step2">⬜ Revisando BTC y SOL...</div>
+        <div class="loading-step" id="step3">⬜ Gemini buscando en web...</div>
+        <div class="loading-step" id="step4">⬜ Generando señal...</div>
+      </div>
+    </div>
+
+    <div class="result-state" id="resultState">
+      <div class="signal-main result-item">
+        <div class="signal-emoji" id="signalEmoji">—</div>
+        <div class="signal-right">
+          <div class="signal-action" id="signalAction">—</div>
+          <div class="signal-grid-type" id="signalGridType">—</div>
+          <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;">
+            <div class="regime-badge" id="regimeBadge">—</div>
+            <div class="risk-badge" id="riskBadge">—</div>
+            <div class="score-badge" id="scoreBadge">—</div>
+          </div>
+        </div>
+      </div>
+      <div class="signal-summary result-item" id="signalSummary">—</div>
+
+      <!-- Grid Config -->
+      <div class="grid-config result-item" id="gridConfig" style="display:none;">
+        <div class="timer-label">⚙️ Configuración recomendada</div>
+        <div class="grid-range-row">
+          <div class="range-side">
+            <div class="range-lbl">Desde</div>
+            <div class="range-val" id="gridLow" style="color:var(--green);">—</div>
+          </div>
+          <div class="range-arrow">→</div>
+          <div class="range-side right">
+            <div class="range-lbl">Hasta</div>
+            <div class="range-val" id="gridHigh" style="color:var(--blue);">—</div>
+          </div>
+        </div>
+        <div class="grid-stats-row">
+          <div class="gstat"><div class="gstat-lbl">Grids</div><div class="gstat-val" id="gridCount">—</div></div>
+          <div class="gstat"><div class="gstat-lbl">Espaciado</div><div class="gstat-val" id="gridSpacing">—</div></div>
+        </div>
+      </div>
+
+      <!-- Breakout Warning -->
+      <div class="breakout-card result-item" id="breakoutCard" style="display:none;">
+        <div class="breakout-header">
+          <div class="breakout-title">💥 Riesgo ruptura del lateral</div>
+          <div class="breakout-risk" id="breakoutRisk">—</div>
+        </div>
+        <div class="breakout-conds" id="breakoutConds"></div>
+        <div class="breakout-dir" id="breakoutDir">—</div>
+        <div class="breakout-note" id="breakoutNote">—</div>
+      </div>
+
+      <!-- Transition Trigger -->
+      <div class="trigger-card result-item" id="triggerCard" style="display:none;">
+        <div class="trigger-header">
+          <div class="trigger-title">⚡ Trigger de transición</div>
+          <div class="trigger-badge" id="triggerBadge">—</div>
+        </div>
+        <div class="trigger-conditions" id="triggerConditions"></div>
+        <div class="trigger-progress">
+          <div class="trigger-progress-fill" id="triggerFill" style="width:0%"></div>
+        </div>
+        <div class="trigger-action" id="triggerAction">—</div>
+      </div>
+
+      <!-- Technicals -->
+      <div class="tech-card result-item" id="techCard" style="display:none;">
+        <div class="timer-label">📊 Técnicos SOL</div>
+        <div id="techList"></div>
+      </div>
+
+      <div class="timer-block result-item" id="timerBlock">
+        <div class="timer-label">⏱ Tiempo de acción</div>
+        <div class="timer-row">
+          <div class="timer-icon" id="timerIcon">—</div>
+          <div class="timer-text" id="timerText">—</div>
+          <div class="timer-badge" id="timerBadge">—</div>
+        </div>
+      </div>
+
+      <div class="news-section result-item">
+        <div class="news-section-label">Factores detectados</div>
+        <div id="newsList"></div>
+      </div>
+
+      <div class="shutdown-block result-item" id="shutdownBlock">
+        <div class="timer-label">🚨 Apagar el bot si...</div>
+        <div class="shutdown-text" id="shutdownText">—</div>
+      </div>
+
+      <div class="confidence-row result-item">
+        <div class="conf-label">Confianza</div>
+        <div class="conf-bar"><div class="conf-fill" id="confFill" style="width:0%"></div></div>
+        <div class="conf-val" id="confVal">—</div>
+      </div>
+    </div>
+
+    <div class="error-state" id="errorState">
+      ⚠️ Error al conectar con Gemini.<br>
+      Verifica que GOOGLE_AI_API_KEY esté en Vercel.<br>
+      <span id="errorDetail" style="opacity:.6;font-size:10px;"></span>
+    </div>
+  </div>
+
+  <!-- Buttons -->
+  <div class="btn-row">
+    <button class="btn btn-morning" onclick="analyze('morning')" id="btnMorning">
+      🌅 Matutina
+      <span class="btn-sub">7:00 AM · antes de clases</span>
+    </button>
+    <button class="btn btn-night" onclick="analyze('night')" id="btnNight">
+      🌙 Nocturna
+      <span class="btn-sub">9:00 PM · revisión nocturna</span>
+    </button>
+  </div>
+  <button class="btn-full" onclick="analyze('full')" id="btnFull">
+    ⚡ Análisis completo ahora
+  </button>
+
+  <!-- Upcoming events -->
+  <div class="events-card" id="eventsCard">
+    <div class="events-title">📅 Próximos eventos macro</div>
+    <!-- Se genera dinámicamente -->
+  </div>
+
+  <a href="../gridbot-advisor/backtest-live.html" style="display:block;text-align:center;margin-bottom:16px;padding:13px;border-radius:14px;background:var(--s1);border:1px solid var(--border2);font-family:var(--mono);font-size:11px;color:var(--muted);text-decoration:none;letter-spacing:.08em;text-transform:uppercase;transition:all .2s;" onmouseover="this.style.borderColor='var(--gb)';this.style.color='var(--green)'" onmouseout="this.style.borderColor='var(--border2)';this.style.color='var(--muted)'">
+    📊 Ver backtest últimas 2 semanas →
+  </a>
+
+  <a href="../gridbot-advisor/gridbot-advisor.html" style="display:block;text-align:center;margin-bottom:16px;padding:11px;border-radius:14px;background:var(--s1);border:1px solid var(--border);font-family:var(--mono);font-size:10px;color:var(--muted);text-decoration:none;letter-spacing:.08em;text-transform:uppercase;transition:all .2s;" onmouseover="this.style.color='var(--muted)'" onmouseout="this.style.color='var(--muted)'">
+    ← Volver a v1 (OpenAI)
+  </a>
+
+  <div class="footer">
+    GRIDBOT ADVISOR v2 · SOL/USDT · Pionex<br>
+    <span>Análisis con</span> <div class="gemini-badge" style="display:inline-flex;">✨ Gemini 2.0 Flash · Google Search · Gratuito</div><br>
+    <span>No es asesoría financiera · DYOR</span>
+  </div>
+
+</div>
+
+<script>
+// ──────────────────────────────────────────
+// CLOCK & TIMEZONE (CDMX = America/Mexico_City)
+// ──────────────────────────────────────────
+function getCDMXTime() {
+  return new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Mexico_City' }));
+}
+
+function updateClock() {
+  const t = getCDMXTime();
+  const h = t.getHours().toString().padStart(2,'0');
+  const m = t.getMinutes().toString().padStart(2,'0');
+  const days = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+  const months = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  document.getElementById('currentTime').textContent =
+    `${days[t.getDay()]} ${t.getDate()} ${months[t.getMonth()]} · ${h}:${m} CDMX`;
+}
+updateClock();
+setInterval(updateClock, 60000);
+
+// ──────────────────────────────────────────
+// SCHEDULE COUNTDOWN
+// MORNING = 7:00, NIGHT = 21:00
+// ──────────────────────────────────────────
+const SCHEDULE_TIMES = [
+  { id: 'morning', hour: 7,  minute: 0, slot: 'morningSlot', countdown: 'morningCountdown' },
+  { id: 'night',   hour: 21, minute: 0, slot: 'nightSlot',   countdown: 'nightCountdown'   },
+];
+const WINDOW_MINUTES = 30; // within X min = "es hora"
+
+function minutesUntil(hour, minute) {
+  const now = getCDMXTime();
+  const target = new Date(now);
+  target.setHours(hour, minute, 0, 0);
+  if (target <= now) target.setDate(target.getDate() + 1);
+  return Math.round((target - now) / 60000);
+}
+
+function formatCountdown(mins) {
+  if (mins <= 0) return '¡Es hora!';
+  if (mins < 60) return `en ${mins} min`;
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  return m > 0 ? `en ${h}h ${m}m` : `en ${h}h`;
+}
+
+function updateSchedule() {
+  SCHEDULE_TIMES.forEach(s => {
+    const mins = minutesUntil(s.hour, s.minute);
+    const el = document.getElementById(s.countdown);
+    const slot = document.getElementById(s.slot);
+    if (mins <= WINDOW_MINUTES) {
+      el.textContent = mins === 0 ? '¡Ahora!' : `en ${mins} min — ¡Toca aquí!`;
+      el.className = 'schedule-slot-countdown now';
+      slot.classList.add('active-now');
+    } else {
+      el.textContent = formatCountdown(mins);
+      el.className = 'schedule-slot-countdown';
+      slot.classList.remove('active-now');
+    }
+  });
+}
+updateSchedule();
+setInterval(updateSchedule, 60000);
+
+// Auto-trigger on page load if within window
+(function autoTrigger() {
+  const morning = minutesUntil(7, 0);
+  const night   = minutesUntil(21, 0);
+  // Only auto-run if there's no saved result from the last 2h
+  const saved = getSavedResult();
+  if (saved) return; // let user manually trigger
+  // No auto-trigger — just highlight buttons. User taps when ready.
+})();
+
+// ──────────────────────────────────────────
+// DYNAMIC MACRO EVENTS
+// ──────────────────────────────────────────
+function renderEvents() {
+  const now = getCDMXTime();
+  const year = now.getFullYear();
+  const month = now.getMonth() + 1;
+
+  // Hardcoded upcoming events — update quarterly
+  const events = [
+    { name: 'FOMC Decisión', date: 'Jun 17-18 2025', impact: 'high' },
+    { name: 'CPI Mayo (dato)', date: '~Jun 11 2025', impact: 'med' },
+    { name: 'NFP Empleos Junio', date: '~Jul 2 2025', impact: 'med' },
+    { name: 'PCE Inflación Mayo', date: '~Jun 27 2025', impact: 'low' },
+  ];
+
+  const impactMap = { high: 'ALTO', med: 'MEDIO', low: 'BAJO' };
+  const container = document.getElementById('eventsCard');
+  const rows = events.map(e => `
+    <div class="event-row">
+      <div class="event-dot ${e.impact}"></div>
+      <div class="event-name">${e.name}</div>
+      <div class="event-date">${e.date}</div>
+      <div class="event-impact ${e.impact}">${impactMap[e.impact]}</div>
+    </div>`).join('');
+  container.innerHTML = `<div class="events-title">📅 Próximos eventos macro</div>${rows}`;
+}
+renderEvents();
+
+// ──────────────────────────────────────────
+// LIVE PRICES (Coinpaprika proxy)
+// ──────────────────────────────────────────
+async function fetchLivePrices() {
+  const ts = document.getElementById('priceTimestamp');
+  if (ts) ts.textContent = '⟳ actualizando...';
+  try {
+    const res = await fetch('/api/prices');
+    if (!res.ok) throw new Error('prices error');
+    const p = await res.json();
+    if (p.error) throw new Error(p.error);
+
+    document.getElementById('solPrice').textContent = '$' + parseFloat(p.sol).toFixed(2);
+    const solCh = parseFloat(p.solChange);
+    document.getElementById('solChange').textContent = (solCh >= 0 ? '+' : '') + solCh.toFixed(2) + '% 24h';
+    document.getElementById('solChange').className = 'snap-change ' + (solCh >= 0.1 ? 'up' : solCh <= -0.1 ? 'down' : 'flat');
+
+    const btcVal = parseFloat(p.btc);
+    document.getElementById('btcPrice').textContent = '$' + (btcVal / 1000).toFixed(1) + 'k';
+    const btcCh = parseFloat(p.btcChange);
+    document.getElementById('btcChange').textContent = (btcCh >= 0 ? '+' : '') + btcCh.toFixed(2) + '% 24h';
+    document.getElementById('btcChange').className = 'snap-change ' + (btcCh >= 0.1 ? 'up' : btcCh <= -0.1 ? 'down' : 'flat');
+
+    if (ts) ts.textContent = '● ' + new Date().toLocaleTimeString('es-MX', { hour:'2-digit', minute:'2-digit' });
+  } catch(e) {
+    console.warn('Price error:', e);
+    if (ts) ts.textContent = '✗ error';
+  }
+}
+fetchLivePrices();
+setInterval(fetchLivePrices, 120000);
+
+// ──────────────────────────────────────────
+// LOCALSTORAGE PERSISTENCE
+// ──────────────────────────────────────────
+const LS_KEY = 'gridbot_v2_last';
+
+function saveResult(data) {
+  try {
+    localStorage.setItem(LS_KEY, JSON.stringify({
+      data,
+      ts: Date.now(),
+      mode: window._lastMode || 'full'
+    }));
+  } catch(e) {}
+}
+
+function getSavedResult() {
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if (!raw) return null;
+    const obj = JSON.parse(raw);
+    // Expire after 14 hours
+    if (Date.now() - obj.ts > 14 * 3600 * 1000) { localStorage.removeItem(LS_KEY); return null; }
+    return obj;
+  } catch(e) { return null; }
+}
+
+function showLastResultBar(obj) {
+  const bar = document.getElementById('lastResultBar');
+  const sig = document.getElementById('lastResultSignal');
+  const timeEl = document.getElementById('lastResultTime');
+  if (!obj) { bar.classList.remove('visible'); return; }
+
+  const minAgo = Math.round((Date.now() - obj.ts) / 60000);
+  const timeStr = minAgo < 60 ? `hace ${minAgo} min` : `hace ${Math.round(minAgo/60)}h`;
+  const modeStr = obj.mode === 'morning' ? 'matutina' : obj.mode === 'night' ? 'nocturna' : 'completa';
+
+  sig.textContent = obj.data.signal || '—';
+  sig.className = 'last-result-signal ' + (obj.data.signal || 'OFF');
+  timeEl.textContent = `${modeStr} · ${timeStr}`;
+  bar.classList.add('visible');
+}
+
+function restoreLastResult() {
+  const obj = getSavedResult();
+  if (obj) renderResult(obj.data);
+}
+
+// On load, show restore bar if there's a saved result
+(function() {
+  const obj = getSavedResult();
+  if (obj) showLastResultBar(obj);
+})();
+
+// ──────────────────────────────────────────
+// LOADING ANIMATION
+// ──────────────────────────────────────────
+async function animateSteps() {
+  const steps = ['step1','step2','step3','step4'];
+  for (let i = 0; i < steps.length; i++) {
+    if (i > 0) document.getElementById(steps[i-1]).className = 'loading-step done';
+    document.getElementById(steps[i]).className = 'loading-step active';
+    await new Promise(r => setTimeout(r, 900));
+  }
+}
+
+function showState(state) {
+  ['idle','loading','result','error'].forEach(s => {
+    document.getElementById(s + 'State').style.display = s === state ? 'block' : 'none';
+  });
+}
+
+function setButtons(disabled) {
+  ['btnMorning','btnNight','btnFull'].forEach(id => {
+    document.getElementById(id).disabled = disabled;
+  });
+  // Also disable schedule slots
+  document.querySelectorAll('.schedule-slot').forEach(el => {
+    el.style.pointerEvents = disabled ? 'none' : 'auto';
+    el.style.opacity = disabled ? '.5' : '1';
+  });
+}
+
+// ──────────────────────────────────────────
+// RENDER RESULT (identical logic to v1)
+// ──────────────────────────────────────────
+function renderResult(data) {
+  const card = document.getElementById('signalCard');
+  card.classList.add('loaded');
+
+  const isOn = data.signal === 'ON';
+  const isOff = data.signal === 'OFF';
+
+  document.getElementById('signalEmoji').textContent = isOn ? '🟢' : isOff ? '🔴' : '🟡';
+
+  const actionEl = document.getElementById('signalAction');
+  actionEl.textContent = isOn ? 'ENCIENDE' : isOff ? 'APAGA' : 'PRECAUCIÓN';
+  actionEl.className = 'signal-action ' + (isOn ? 'on' : isOff ? 'off' : 'cau');
+
+  const gridEl = document.getElementById('signalGridType');
+  const isInfinity = data.gridType === 'INFINITY';
+  const isNormal = data.gridType === 'NORMAL';
+  gridEl.textContent = isInfinity ? '📊 Infinity Grid' : isNormal ? '📊 Grid Normal' : '⏸ Bot pausado';
+  gridEl.className = 'signal-grid-type ' + (isInfinity ? 'inf' : isNormal ? 'nor' : 'off');
+
+  const regimeMap = { LATERAL:'⟺ Lateral', ALCISTA:'↑ Alcista', BAJISTA:'↓ Bajista', INCERTIDUMBRE_MACRO:'⚡ Macro' };
+  document.getElementById('regimeBadge').textContent = regimeMap[data.regime] || data.regime || '—';
+
+  const riskEl = document.getElementById('riskBadge');
+  const riskMap = { BAJO:'🟢 Riesgo Bajo', MEDIO:'🟡 Riesgo Medio', ALTO:'🔴 Riesgo Alto' };
+  riskEl.textContent = riskMap[data.riskLevel] || data.riskLevel || '—';
+  riskEl.className = 'risk-badge ' + (data.riskLevel === 'BAJO' ? 'low' : data.riskLevel === 'MEDIO' ? 'med' : 'high');
+
+  document.getElementById('scoreBadge').textContent = 'Score: ' + (data.score || data.confidence || '—') + '/100';
+
+  if (data.shutdownConditions) {
+    document.getElementById('shutdownText').textContent = data.shutdownConditions;
+  }
+
+  const bgEl = document.getElementById('cardBg');
+  bgEl.style.background = isOn
+    ? 'radial-gradient(ellipse at top left, #05f5a008, transparent 60%)'
+    : isOff
+    ? 'radial-gradient(ellipse at top left, #ff335508, transparent 60%)'
+    : 'radial-gradient(ellipse at top left, #ffcc0008, transparent 60%)';
+
+  document.getElementById('signalSummary').textContent = data.summary;
+
+  const timerBadge = document.getElementById('timerBadge');
+  document.getElementById('timerIcon').textContent = isOff ? '⏰' : isOn ? '✅' : '⚠️';
+  document.getElementById('timerText').textContent = data.timerText;
+  timerBadge.textContent = data.timerBadge;
+  timerBadge.className = 'timer-badge ' + (isOn ? 'on' : isOff ? 'off' : 'cau');
+
+  const newsList = document.getElementById('newsList');
+  newsList.innerHTML = '';
+  (data.factors || []).forEach(f => {
+    const div = document.createElement('div');
+    div.className = `news-item ${f.type}`;
+    div.innerHTML = `<div class="news-item-icon">${f.icon}</div><div>${f.text}</div>`;
+    newsList.appendChild(div);
+  });
+
+  const conf = data.confidence || 75;
+  document.getElementById('confVal').textContent = conf + '%';
+  setTimeout(() => {
+    const fillEl = document.getElementById('confFill');
+    fillEl.style.width = conf + '%';
+    fillEl.style.background = conf >= 80 ? 'var(--green)' : conf >= 60 ? 'var(--yellow)' : 'var(--red)';
+  }, 300);
+
+  // Grid params
+  if (data.gridParams) {
+    const gp = data.gridParams;
+    document.getElementById('gridLow').textContent = '$' + parseFloat(gp.low).toFixed(2);
+    document.getElementById('gridHigh').textContent = (!gp.high || gp.high === 0) ? '∞' : '$' + parseFloat(gp.high).toFixed(2);
+    document.getElementById('gridCount').textContent = gp.grids ? gp.grids + ' grids' : '—';
+    document.getElementById('gridSpacing').textContent = gp.spacing ? '$' + gp.spacing : '—';
+    let noteEl = document.getElementById('gridRangeNote');
+    if (!noteEl) {
+      noteEl = document.createElement('div');
+      noteEl.id = 'gridRangeNote';
+      noteEl.style.cssText = 'margin-top:10px;font-family:var(--mono);font-size:10px;color:var(--muted);padding:7px 10px;border-radius:7px;background:var(--s1);border:1px solid var(--border);line-height:1.5;';
+      document.getElementById('gridConfig').appendChild(noteEl);
+    }
+    noteEl.textContent = gp.rangeNote ? '📐 ' + gp.rangeNote : '';
+    noteEl.style.display = gp.rangeNote ? 'block' : 'none';
+    document.getElementById('gridConfig').style.display = 'block';
+  }
+
+  // Breakout warning
+  if (data.breakoutWarning) {
+    const bw = data.breakoutWarning;
+    const risk = (bw.risk || 'BAJO').toLowerCase();
+    if (risk === 'alto' || risk === 'medio') {
+      const bc = document.getElementById('breakoutCard');
+      bc.className = `breakout-card result-item ${risk}`;
+      bc.style.display = 'block';
+      const riskEl = document.getElementById('breakoutRisk');
+      riskEl.textContent = risk === 'alto' ? '🔴 Riesgo ALTO' : '🟡 Riesgo MEDIO';
+      riskEl.className = `breakout-risk ${risk}`;
+      const conds = [
+        { key: 'bollingerSqueeze', icon: '🎯', label: 'BB Squeeze' },
+        { key: 'atrCompressed',    icon: '📉', label: 'ATR bajo'   },
+        { key: 'volumeAccumulating', icon: '📦', label: 'Vol. acum.' },
+      ];
+      document.getElementById('breakoutConds').innerHTML = conds.map(c =>
+        `<div class="bcond ${bw[c.key] ? 'ok' : 'fail'}">
+           <div class="bcond-icon">${c.icon}</div><div>${c.label}</div>
+         </div>`).join('');
+      const dir = bw.direction || 'INDEFINIDO';
+      const dirIcon = dir === 'ALCISTA' ? '↑ Probable alcista' : dir === 'BAJISTA' ? '↓ Probable bajista' : '↔ Dirección indefinida';
+      const dirColor = dir === 'ALCISTA' ? 'var(--green)' : dir === 'BAJISTA' ? 'var(--red)' : 'var(--muted)';
+      document.getElementById('breakoutDir').innerHTML =
+        `<span style="color:var(--muted);font-size:9px;text-transform:uppercase;letter-spacing:.1em;">Dirección probable</span>
+         <span style="margin-left:auto;font-weight:700;color:${dirColor};">${dirIcon}</span>`;
+      const noteEl = document.getElementById('breakoutNote');
+      noteEl.textContent = bw.note || '—';
+      noteEl.className = `breakout-note ${risk}`;
+    }
+  }
+
+  // Transition trigger
+  if (data.transitionTrigger) {
+    const t = data.transitionTrigger;
+    const rec = (t.recommendation || '').toUpperCase();
+    const cls = rec === 'CAMBIAR' ? 'cambiar' : rec === 'VIGILAR' ? 'vigilar' : 'mantener';
+    const tc = document.getElementById('triggerCard');
+    tc.className = `trigger-card result-item ${cls}`;
+    tc.style.display = 'block';
+    const badge = document.getElementById('triggerBadge');
+    badge.textContent = rec === 'CAMBIAR' ? '→ Cambiar a Infinity' : rec === 'VIGILAR' ? '⚠ Vigilar' : '✓ Mantener';
+    badge.className = `trigger-badge ${cls}`;
+    const conds = [
+      { key: 'adxStrong',     label: 'ADX > 25',         sub: 'tendencia fuerte' },
+      { key: 'btcStrong',     label: 'BTC fuerte',       sub: 'momentum positivo' },
+      { key: 'solAboveEMAs',  label: 'SOL > EMA20/50',   sub: 'por encima de medias' },
+      { key: 'volumeGrowing', label: 'Vol. creciente',   sub: 'mayor al promedio' },
+    ];
+    document.getElementById('triggerConditions').innerHTML = conds.map(c =>
+      `<div class="trigger-cond ${t[c.key] ? 'ok' : 'fail'}">
+         <div class="trigger-cond-dot"></div>
+         <div class="trigger-cond-text"><strong>${c.label}</strong><br><span style="opacity:.6;font-size:10px;">${c.sub}</span></div>
+       </div>`).join('');
+    const met = parseInt(t.conditionsMet) || 0;
+    const fillColor = rec === 'CAMBIAR' ? 'var(--green)' : rec === 'VIGILAR' ? 'var(--yellow)' : 'var(--muted)';
+    const fill = document.getElementById('triggerFill');
+    fill.style.background = fillColor;
+    setTimeout(() => { fill.style.width = (met / 4 * 100) + '%'; }, 300);
+    document.getElementById('triggerAction').textContent =
+      t.action || (rec === 'CAMBIAR' ? 'Grid Normal → Infinity Grid' : rec === 'VIGILAR' ? 'Monitorear próximas horas' : 'Mantener configuración actual');
+  }
+
+  // Technicals
+  if (data.technicals) {
+    const t = data.technicals;
+    const techList = document.getElementById('techList');
+    techList.innerHTML = '';
+    const rsi = parseFloat(t.rsi14);
+    const rsiColor = rsi >= 70 ? 'var(--red)' : rsi <= 30 ? 'var(--green)' : 'var(--yellow)';
+    const rsiPct = Math.min(100, Math.max(0, rsi));
+    const rsiBadge = rsi >= 70 ? 'bear' : rsi <= 30 ? 'bull' : 'neu';
+    techList.innerHTML += `
+      <div class="tech-row">
+        <div class="tech-name">RSI 14</div>
+        <div class="rsi-wrap">
+          <div class="rsi-track"><div class="rsi-thumb" style="left:${rsiPct}%;background:${rsiColor};"></div></div>
+          <div class="tech-val" style="color:${rsiColor};width:32px;">${rsi}</div>
+        </div>
+        <div class="tech-badge ${rsiBadge}">${t.rsiSignal || '—'}</div>
+      </div>`;
+    const price = parseFloat(data.solPrice) || 0;
+    [['EMA 20', t.ema20], ['EMA 50', t.ema50], ['EMA 200', t.ema200]].forEach(([label, val]) => {
+      if (!val) return;
+      const v = parseFloat(val);
+      const above = price > v;
+      techList.innerHTML += `
+        <div class="tech-row">
+          <div class="tech-name">${label}</div>
+          <div class="tech-val">$${v.toFixed(2)}</div>
+          <div class="tech-badge ${above ? 'bull' : 'bear'}">${above ? 'precio ↑' : 'precio ↓'}</div>
+        </div>`;
+    });
+    if (t.support) techList.innerHTML += `
+      <div class="tech-row">
+        <div class="tech-name">Soporte</div>
+        <div class="tech-val" style="color:var(--green);">$${parseFloat(t.support).toFixed(2)}</div>
+        <div class="tech-badge bull">clave</div>
+      </div>`;
+    if (t.resistance) techList.innerHTML += `
+      <div class="tech-row">
+        <div class="tech-name">Resistencia</div>
+        <div class="tech-val" style="color:var(--red);">$${parseFloat(t.resistance).toFixed(2)}</div>
+        <div class="tech-badge bear">clave</div>
+      </div>`;
+    if (t.trend) techList.innerHTML += `
+      <div class="tech-row">
+        <div class="tech-name">Tendencia</div>
+        <div class="tech-val" style="color:var(--text);font-size:10px;">${t.trend}</div>
+        <div class="tech-badge ${t.volumeSignal === 'alto' ? 'bull' : 'neu'}">vol ${t.volumeSignal || '—'}</div>
+      </div>`;
+    document.getElementById('techCard').style.display = 'block';
+  }
+
+  // Update snapshot prices from response
+  const allText = (data.summary || '') + ' ' + JSON.stringify(data.factors || '');
+  let solP = data.solPrice || null, btcP = data.btcPrice || null;
+  let solCh = data.solChange || null, btcCh = data.btcChange || null;
+  let solDir = data.solChangeDir || null, btcDir = data.btcChangeDir || null;
+  if (!solP) {
+    const m = allText.match(/SOL[^$]*\$([0-9]{2,3}(?:\.[0-9]{1,2})?)/i) || allText.match(/~\$([7-9][0-9](?:\.[0-9]{1,2})?)/);
+    if (m) solP = '$' + m[1];
+  }
+  if (!btcP) {
+    const m = allText.match(/BTC[^$]*\$([0-9]{2,3})[Kk]/i) || allText.match(/\$([0-9]{2,3}(?:,[0-9]{3})?(?:\.[0-9]{3})?)[\s,]?(?:K|k|,000)?[^%]/);
+    if (m) { const raw = m[1].replace(',',''); btcP = raw.length <= 3 ? '$' + raw + 'k' : '$' + (parseInt(raw)/1000).toFixed(1) + 'k'; }
+  }
+  if (!solCh) { const m = allText.match(/SOL[^%+\-]*([+\-][0-9]+(?:\.[0-9]+)?%)/i); if (m) { solCh = m[1]; solDir = solCh.startsWith('+') ? 'up' : 'down'; } }
+  if (!btcCh) { const m = allText.match(/BTC[^%+\-]*([+\-][0-9]+(?:\.[0-9]+)?%)/i); if (m) { btcCh = m[1]; btcDir = btcCh.startsWith('+') ? 'up' : 'down'; } }
+  if (solP) { document.getElementById('solPrice').textContent = solP; if (solCh) { document.getElementById('solChange').textContent = solCh + ' 24h'; document.getElementById('solChange').className = 'snap-change ' + (solDir || 'flat'); } }
+  if (btcP) { document.getElementById('btcPrice').textContent = btcP; if (btcCh) { document.getElementById('btcChange').textContent = btcCh + ' 24h'; document.getElementById('btcChange').className = 'snap-change ' + (btcDir || 'flat'); } }
+
+  showState('result');
+}
+
+// ──────────────────────────────────────────
+// MAIN ANALYZE FUNCTION
+// ──────────────────────────────────────────
+async function analyze(mode) {
+  window._lastMode = mode;
+  showState('loading');
+  setButtons(true);
+  ['step1','step2','step3','step4'].forEach(id => { document.getElementById(id).className = 'loading-step'; });
+  animateSteps();
+
+  const modeLabel = mode === 'morning'
+    ? 'CONSULTA MATUTINA (7 AM CDMX) — decisión para el día de hoy'
+    : mode === 'night'
+    ? 'CONSULTA NOCTURNA (9 PM CDMX) — anticipar mañana y próximos días'
+    : 'ANÁLISIS COMPLETO — señal inmediata con contexto macro completo';
+
+  const prompt = `Eres el asistente de un grid bot de trading para SOL/USDT en Pionex.
+El usuario tiene $500 en 1x sin apalancamiento. Puede usar Grid Normal o Infinity Grid.
+
+CONTEXTO DEL BOT:
+- Grid Normal: mejor en mercados laterales/bajistas, sin exposición direccional, rango ±8% aprox.
+- Infinity Grid: mejor en mercados alcistas, tiene posición en SOL (~50% del capital), sin techo superior
+- FOMC próximo: Jun 17-18 (alto impacto)
+- CPI próximo: ~Jun 11
+
+MODO: ${modeLabel}
+FECHA/HORA ACTUAL: ${new Date().toLocaleString('es-MX', { timeZone: 'America/Mexico_City' })} hora CDMX
+
+TAREA:
+1. Busca en web (Google Search): precio actual de SOL y BTC, noticias macro últimas 24h (Fed, CPI, inflación, geopolítica), noticias de Solana (outages, ETF flows, hacks), Y análisis técnico de SOL: RSI 14, EMA 20/50/200, soportes y resistencias clave, volumen, Bollinger Bands, ATR.
+2. Analiza todo el contexto y genera una señal para el bot.
+3. Responde ÚNICAMENTE con un JSON válido con esta estructura exacta (sin backticks, sin texto extra, sin markdown):
+
+{
+  "signal": "ON" | "OFF" | "PRECAUCION",
+  "gridType": "INFINITY" | "NORMAL" | "PAUSADO",
+  "summary": "Resumen en 2-3 oraciones en español explicando la señal",
+  "timerText": "Texto explicando cuánto tiempo ON u OFF y cuándo reactivar/revisar",
+  "timerBadge": "ej: 'Activo 24h' o 'Apagar ~18h' o 'Revisar 7 AM'",
+  "confidence": 85,
+  "solPrice": "precio actual SOL, ej: $162.40",
+  "solChange": "+1.56%",
+  "solChangeDir": "up | down | flat",
+  "btcPrice": "precio BTC abreviado, ej: $103.5k",
+  "btcChange": "+1.17%",
+  "btcChangeDir": "up | down | flat",
+  "regime": "LATERAL | ALCISTA | BAJISTA | INCERTIDUMBRE_MACRO",
+  "riskLevel": "BAJO | MEDIO | ALTO",
+  "score": 85,
+  "shutdownConditions": "condiciones específicas para apagar el bot",
+  "gridParams": {
+    "low": 142.00,
+    "high": 195.00,
+    "grids": 15,
+    "spacing": "1.77",
+    "rangeNote": "explicación del ajuste, ej: Ampliado a ±10% por CPI Jun 11"
+  },
+  "technicals": {
+    "rsi14": 54,
+    "rsiSignal": "sobrecomprado | sobrevendido | neutral",
+    "ema20": 158.40,
+    "ema50": 152.10,
+    "ema200": 145.00,
+    "trend": "descripción corta de la tendencia",
+    "support": 148.00,
+    "resistance": 175.00,
+    "volumeSignal": "alto | normal | bajo"
+  },
+  "breakoutWarning": {
+    "bollingerSqueeze": true,
+    "atrCompressed": true,
+    "volumeAccumulating": false,
+    "conditionsMet": 2,
+    "risk": "ALTO | MEDIO | BAJO",
+    "direction": "ALCISTA | BAJISTA | INDEFINIDO",
+    "note": "descripción breve del riesgo"
+  },
+  "transitionTrigger": {
+    "adxStrong": true,
+    "btcStrong": true,
+    "solAboveEMAs": true,
+    "volumeGrowing": false,
+    "conditionsMet": 3,
+    "recommendation": "CAMBIAR | MANTENER | VIGILAR",
+    "action": "Grid Normal → Infinity Grid | Mantener | Preparar cambio"
+  },
+  "factors": [
+    {"type": "pos|neg|neu", "icon": "emoji", "text": "descripción del factor en español"},
+    {"type": "pos|neg|neu", "icon": "emoji", "text": "descripción del factor en español"},
+    {"type": "pos|neg|neu", "icon": "emoji", "text": "descripción del factor en español"}
+  ]
+}
+
+PASO 1 — Determina el régimen de mercado usando técnicos:
+- ALCISTA: precio SOL > EMA20 > EMA50, RSI entre 50-70, BTC en verde → candidato Infinity Grid
+- LATERAL: precio SOL entre EMA20 y EMA50, RSI entre 40-60, sin tendencia clara → candidato Grid Normal
+- BAJISTA: precio SOL < EMA50, RSI < 45 o bajando, BTC en rojo → candidato PRECAUCION u OFF
+- INCERTIDUMBRE_MACRO: evento macro de alto impacto en menos de 5 días → override a PRECAUCION o OFF
+
+PASO 2 — Aplica estas reglas duras (tienen prioridad sobre técnicos):
+- OFF obligatorio si: FOMC/CPI en menos de 24h, BTC cae >4% en el día, outage de Solana activo, noticias hawkish extremas
+- PRECAUCION + Grid Normal si: evento macro en 2-5 días, BTC -2% a -4%, RSI >70 (sobrecomprado)
+- ON + Infinity Grid si: régimen ALCISTA confirmado por técnicos + macro sin eventos en >7 días
+- ON + Grid Normal si: régimen LATERAL o macro incierto pero técnicos no bearish
+
+Reglas para breakoutWarning — CRÍTICO para proteger el grid:
+- bollingerSqueeze: true si ancho de Bandas de Bollinger en mínimos de los últimos 10-14 días
+- atrCompressed: true si ATR 14 de SOL está por debajo de su media de los últimos 14 días
+- volumeAccumulating: true si el volumen lleva 2-3 días creciendo pero el precio no se mueve proporcionalmente
+- conditionsMet: cuántas de las 3 son true
+- risk: "ALTO" si conditionsMet >= 2, "MEDIO" si conditionsMet == 1, "BAJO" si 0
+- direction: "ALCISTA" si BTC fuerte + volumen comprando + precio en parte alta del rango. "BAJISTA" si BTC débil + precio en mínimos. "INDEFINIDO" si no hay señal clara.
+- note: si risk es ALTO, sé URGENTE: "⚠️ BB squeeze + ATR mínimos — NO abras grid nuevo hasta confirmar dirección"
+
+Reglas para transitionTrigger:
+- adxStrong: true si ADX > 25
+- btcStrong: true si BTC lleva 2+ días en verde con momentum
+- solAboveEMAs: true si precio SOL > EMA20 Y > EMA50 simultáneamente
+- volumeGrowing: true si volumen reciente claramente mayor al promedio 7 días
+- conditionsMet: cuenta cuántas son true (0-4)
+- recommendation: "CAMBIAR" si conditionsMet >= 3, "VIGILAR" si == 2, "MANTENER" si <= 1
+- action: si CAMBIAR, escribe exactamente: "Apaga Grid Normal → Abre Infinity Grid con límite inferior en $X"
+
+Reglas para gridParams:
+PASO A — Rango base según contexto macro:
+  - Sin eventos macro en 5 días → rango ±8% (low=precio×0.92, high=precio×1.08)
+  - Evento MEDIO en 2-5 días (CPI, NFP) → rango ±10% (low=precio×0.90, high=precio×1.10)
+  - Evento ALTO en < 3 días (FOMC, CPI sorpresa) → rango ±12% (low=precio×0.88, high=precio×1.12)
+  - Régimen BAJISTA → asimétrico: low=precio×0.88, high=precio×1.05
+PASO B — Ajusta con técnicos:
+  - Si soporte técnico fuerte → ancla el low en ese soporte
+  - Si resistencia fuerte → ancla el high en esa resistencia
+  - RSI > 70 → baja el high al nivel de resistencia más cercano
+  - RSI < 30 → sube el low al soporte más cercano por encima del low-base
+PASO C — grids = 15, spacing = (high-low)/15 redondeado a 2 decimales
+PASO D — rangeNote: 1 línea explicando el ajuste
+
+Responde SOLO el JSON, sin texto adicional.`;
+
+  try {
+    // Fetch live prices first
+    document.getElementById('step1').className = 'loading-step active';
+    try {
+      const priceRes = await fetch('/api/prices');
+      const p = await priceRes.json();
+      if (p.sol) {
+        document.getElementById('solPrice').textContent = '$' + parseFloat(p.sol).toFixed(2);
+        const solCh = parseFloat(p.solChange);
+        document.getElementById('solChange').textContent = (solCh >= 0 ? '+' : '') + solCh.toFixed(2) + '% 24h';
+        document.getElementById('solChange').className = 'snap-change ' + (solCh >= 0.1 ? 'up' : solCh <= -0.1 ? 'down' : 'flat');
+      }
+      if (p.btc) {
+        const btcVal = parseFloat(p.btc);
+        document.getElementById('btcPrice').textContent = '$' + (btcVal / 1000).toFixed(1) + 'k';
+        const btcCh = parseFloat(p.btcChange);
+        document.getElementById('btcChange').textContent = (btcCh >= 0 ? '+' : '') + btcCh.toFixed(2) + '% 24h';
+        document.getElementById('btcChange').className = 'snap-change ' + (btcCh >= 0.1 ? 'up' : btcCh <= -0.1 ? 'down' : 'flat');
+      }
+    } catch(e) { console.warn('Price fetch error', e); }
+    document.getElementById('step1').className = 'loading-step done';
+    document.getElementById('step2').className = 'loading-step active';
+    document.getElementById('step2').className = 'loading-step done';
+    document.getElementById('step3').className = 'loading-step active';
+
+    // Call Gemini via v2 proxy
+    const response = await fetch('/api/analyze-v2', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+
+    document.getElementById('step3').className = 'loading-step done';
+    document.getElementById('step4').className = 'loading-step active';
+
+    const data = await response.json();
+
+    if (data.error) throw new Error(data.error);
+
+    let text = '';
+    if (data.content) {
+      for (const block of data.content) {
+        if (block.type === 'text') text += block.text;
+      }
+    }
+
+    // Strip any markdown code fences Gemini might add
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error('No JSON found in Gemini response');
+    const clean = jsonMatch[0].replace(/```json|```/g, '').trim();
+    const result = JSON.parse(clean);
+
+    // Save to localStorage
+    saveResult(result);
+    showLastResultBar({ data: result, ts: Date.now(), mode });
+
+    renderResult(result);
+  } catch (err) {
+    console.error(err);
+    document.getElementById('errorDetail').textContent = err.message;
+    showState('error');
+  } finally {
+    setButtons(false);
+  }
+}
+</script>
+</body>
+</html>
