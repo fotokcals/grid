@@ -367,6 +367,53 @@ body::before {
 .rsi-track { flex: 1; height: 4px; background: var(--border2); border-radius: 2px; position: relative; }
 .rsi-thumb { position: absolute; top: -3px; width: 10px; height: 10px; border-radius: 50%; transform: translateX(-50%); border: 2px solid var(--s2); }
 
+/* ── BREAKOUT WARNING ── */
+.breakout-card {
+  border-radius: 12px; padding: 14px 16px; margin-bottom: 16px;
+  border: 1px solid var(--border2); background: var(--s2);
+}
+.breakout-card.alto {
+  border-color: #ff6b0050;
+  background: linear-gradient(135deg, #ff335508, #ffcc0006);
+  animation: breakoutPulse 2.5s ease-in-out infinite;
+}
+.breakout-card.medio { border-color: var(--yb); background: linear-gradient(135deg, var(--s2), #ffcc0006); }
+@keyframes breakoutPulse {
+  0%,100% { border-color: #ff6b0050; }
+  50% { border-color: #ff6b00aa; box-shadow: 0 0 12px #ff6b0020; }
+}
+.breakout-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.breakout-title { font-family: var(--mono); font-size: 9px; text-transform: uppercase; letter-spacing: .15em; color: var(--muted); }
+.breakout-risk {
+  font-family: var(--mono); font-size: 10px; font-weight: 700;
+  padding: 3px 10px; border-radius: 6px; text-transform: uppercase; letter-spacing: .08em;
+}
+.breakout-risk.alto { background: #ff6b0020; color: #ff6b00; border: 1px solid #ff6b0050; }
+.breakout-risk.medio { background: var(--yd); color: var(--yellow); border: 1px solid var(--yb); }
+.breakout-risk.bajo { background: var(--s1); color: var(--muted); border: 1px solid var(--border); }
+.breakout-conds { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; margin-bottom: 10px; }
+.bcond {
+  display: flex; flex-direction: column; align-items: center; gap: 5px;
+  padding: 8px 6px; border-radius: 8px; text-align: center;
+  font-family: var(--mono); font-size: 9px; text-transform: uppercase; letter-spacing: .06em;
+  border: 1px solid transparent;
+}
+.bcond.ok { background: #ff6b0015; border-color: #ff6b0040; color: #ff9500; }
+.bcond.fail { background: var(--s1); border-color: var(--border); color: var(--muted); opacity: .5; }
+.bcond-icon { font-size: 16px; }
+.breakout-dir {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 10px; border-radius: 8px;
+  background: var(--s1); border: 1px solid var(--border);
+  font-family: var(--mono); font-size: 10px; margin-bottom: 8px;
+}
+.breakout-note {
+  font-family: var(--mono); font-size: 10px; line-height: 1.6;
+  color: var(--text); padding: 8px 10px; border-radius: 8px;
+  background: var(--s1); border: 1px solid var(--border);
+}
+.breakout-note.alto { color: #ff9500; border-color: #ff6b0040; background: #ff6b0010; }
+
 /* ── TRANSITION TRIGGER ── */
 .trigger-card {
   border-radius: 12px; padding: 14px 16px; margin-bottom: 16px;
@@ -497,6 +544,17 @@ body::before {
             <div class="gstat-val" id="gridSpacing">—</div>
           </div>
         </div>
+      </div>
+
+      <!-- Breakout Warning -->
+      <div class="breakout-card result-item" id="breakoutCard" style="display:none;">
+        <div class="breakout-header">
+          <div class="breakout-title">💥 Riesgo ruptura del lateral</div>
+          <div class="breakout-risk" id="breakoutRisk">—</div>
+        </div>
+        <div class="breakout-conds" id="breakoutConds"></div>
+        <div class="breakout-dir" id="breakoutDir">—</div>
+        <div class="breakout-note" id="breakoutNote">—</div>
       </div>
 
       <!-- Transition Trigger -->
@@ -744,6 +802,44 @@ function renderResult(data) {
     fillEl.style.background = conf >= 80 ? 'var(--green)' : conf >= 60 ? 'var(--yellow)' : 'var(--red)';
   }, 300);
 
+  // Breakout warning
+  if (data.breakoutWarning) {
+    const bw = data.breakoutWarning;
+    const risk = (bw.risk || 'BAJO').toLowerCase();
+
+    if (risk === 'alto' || risk === 'medio') {
+      const card = document.getElementById('breakoutCard');
+      card.className = `breakout-card result-item ${risk}`;
+      card.style.display = 'block';
+
+      const riskEl = document.getElementById('breakoutRisk');
+      riskEl.textContent = risk === 'alto' ? '🔴 Riesgo ALTO' : '🟡 Riesgo MEDIO';
+      riskEl.className = `breakout-risk ${risk}`;
+
+      const conds = [
+        { key: 'bollingerSqueeze',   icon: '🎯', label: 'BB Squeeze' },
+        { key: 'atrCompressed',      icon: '📉', label: 'ATR bajo'   },
+        { key: 'volumeAccumulating', icon: '📦', label: 'Vol. acum.' },
+      ];
+      document.getElementById('breakoutConds').innerHTML = conds.map(c => `
+        <div class="bcond ${bw[c.key] ? 'ok' : 'fail'}">
+          <div class="bcond-icon">${c.icon}</div>
+          <div>${c.label}</div>
+        </div>`).join('');
+
+      const dir = bw.direction || 'INDEFINIDO';
+      const dirIcon = dir === 'ALCISTA' ? '↑ Probable alcista' : dir === 'BAJISTA' ? '↓ Probable bajista' : '↔ Dirección indefinida';
+      const dirColor = dir === 'ALCISTA' ? 'var(--green)' : dir === 'BAJISTA' ? 'var(--red)' : 'var(--muted)';
+      document.getElementById('breakoutDir').innerHTML =
+        `<span style="color:var(--muted);font-size:9px;text-transform:uppercase;letter-spacing:.1em;">Dirección probable</span>
+         <span style="margin-left:auto;font-weight:700;color:${dirColor};">${dirIcon}</span>`;
+
+      const noteEl = document.getElementById('breakoutNote');
+      noteEl.textContent = bw.note || '—';
+      noteEl.className = `breakout-note ${risk}`;
+    }
+  }
+
   // Transition trigger
   if (data.transitionTrigger) {
     const t = data.transitionTrigger;
@@ -978,6 +1074,15 @@ TAREA:
     "resistance": 175.00,
     "volumeSignal": "alto | normal | bajo"
   },
+  "breakoutWarning": {
+    "bollingerSqueeze": true,
+    "atrCompressed": true,
+    "volumeAccumulating": false,
+    "conditionsMet": 2,
+    "risk": "ALTO | MEDIO | BAJO",
+    "direction": "ALCISTA | BAJISTA | INDEFINIDO",
+    "note": "descripción breve del riesgo, ej: BB squeeze + ATR en mínimos 7d — explosión probable 24-48h"
+  },
   "transitionTrigger": {
     "adxStrong": true,
     "btcStrong": true,
@@ -1005,6 +1110,16 @@ PASO 2 — Aplica estas reglas duras (tienen prioridad sobre técnicos):
 - PRECAUCION + Grid Normal si: evento macro en 2-5 días, BTC -2% a -4%, RSI >70 (sobrecomprado)
 - ON + Infinity Grid si: régimen ALCISTA confirmado por técnicos + macro sin eventos en >7 días
 - ON + Grid Normal si: régimen LATERAL o macro incierto pero técnicos no bearish
+
+Reglas para breakoutWarning — CRÍTICO para proteger el grid:
+Busca en web datos técnicos de SOL para evaluar compresión de volatilidad:
+- bollingerSqueeze: true si el ancho de las Bandas de Bollinger (BB width = (BB_upper - BB_lower) / BB_middle) está en mínimos de los últimos 10-14 días. Indica volatilidad comprimida, el mercado está "enrollando".
+- atrCompressed: true si el ATR (Average True Range 14) de SOL está por debajo de su media de los últimos 14 días. Rangos diarios pequeños = mercado lateral comprimiéndose.
+- volumeAccumulating: true si el volumen lleva 2-3 días creciendo pero el precio no se mueve proporcionalmente (divergencia volumen/precio = acumulación silenciosa antes del movimiento).
+- conditionsMet: cuántas de las 3 son true
+- risk: "ALTO" si conditionsMet >= 2, "MEDIO" si conditionsMet == 1, "BAJO" si 0
+- direction: intenta detectar la dirección probable del breakout. "ALCISTA" si BTC fuerte + volumen comprando + precio en parte alta del rango. "BAJISTA" si BTC débil + precio en mínimos del rango. "INDEFINIDO" si no hay señal clara.
+- note: 1 línea explicando qué detectaste. Si risk es ALTO, sé URGENTE: "⚠️ BB squeeze + ATR mínimos — NO abras grid nuevo hasta confirmar dirección"
 
 Reglas para transitionTrigger — MUY IMPORTANTE, evalúa con cuidado:
 - adxStrong: true si ADX > 25 (mercado en tendencia, no lateral/ranging)
