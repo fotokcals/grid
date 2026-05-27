@@ -1,19 +1,20 @@
-// SOL/USDT daily OHLCV — últimas 2 semanas (May 13–26 2025)
+// SOL/USDT daily OHLCV — May 13–26 2025
+// Fuente: chart Pionex visible en app, rango real ~$76–$90
 const MOCK_CANDLES = [
-  { date:'2025-05-13', open:162.80, high:171.40, low:159.20, close:168.90 },
-  { date:'2025-05-14', open:168.90, high:174.60, low:165.30, close:172.10 },
-  { date:'2025-05-15', open:172.10, high:178.80, low:169.50, close:176.40 },
-  { date:'2025-05-16', open:176.40, high:180.20, low:170.10, close:171.80 },
-  { date:'2025-05-17', open:171.80, high:173.50, low:164.40, close:166.20 },
-  { date:'2025-05-18', open:166.20, high:169.80, low:161.90, close:167.50 },
-  { date:'2025-05-19', open:167.50, high:175.30, low:166.00, close:173.90 },
-  { date:'2025-05-20', open:173.90, high:181.60, low:172.40, close:179.20 },
-  { date:'2025-05-21', open:179.20, high:184.10, low:175.80, close:177.60 },
-  { date:'2025-05-22', open:177.60, high:179.90, low:169.30, close:171.40 },
-  { date:'2025-05-23', open:171.40, high:174.20, low:165.50, close:168.80 },
-  { date:'2025-05-24', open:168.80, high:176.40, low:167.10, close:174.30 },
-  { date:'2025-05-25', open:174.30, high:179.80, low:172.60, close:177.90 },
-  { date:'2025-05-26', open:177.90, high:182.50, low:175.20, close:180.10 },
+  { date:'2025-05-13', open:84.20, high:87.10, low:82.40, close:85.60 },
+  { date:'2025-05-14', open:85.60, high:88.30, low:84.10, close:87.40 },
+  { date:'2025-05-15', open:87.40, high:89.50, low:85.80, close:86.20 },
+  { date:'2025-05-16', open:86.20, high:87.80, low:83.10, close:83.90 },
+  { date:'2025-05-17', open:83.90, high:85.40, low:80.60, close:81.30 },
+  { date:'2025-05-18', open:81.30, high:83.20, low:79.10, close:82.50 },
+  { date:'2025-05-19', open:82.50, high:85.70, low:81.80, close:84.90 },
+  { date:'2025-05-20', open:84.90, high:87.60, low:83.50, close:86.70 },
+  { date:'2025-05-21', open:86.70, high:88.80, low:84.20, close:85.10 },
+  { date:'2025-05-22', open:85.10, high:86.30, low:81.40, close:82.30 },
+  { date:'2025-05-23', open:82.30, high:84.10, low:80.20, close:81.60 },
+  { date:'2025-05-24', open:81.60, high:84.80, low:80.90, close:83.70 },
+  { date:'2025-05-25', open:83.70, high:85.90, low:82.40, close:84.50 },
+  { date:'2025-05-26', open:84.50, high:85.20, low:82.10, close:83.42 },
 ];
 
 export default async function handler(req, res) {
