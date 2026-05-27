@@ -995,19 +995,22 @@ PASO 2 — Aplica estas reglas duras (tienen prioridad sobre técnicos):
 - ON + Infinity Grid si: régimen ALCISTA confirmado por técnicos + macro sin eventos en >7 días
 - ON + Grid Normal si: régimen LATERAL o macro incierto pero técnicos no bearish
 
-Reglas para transitionTrigger (evalúa si conviene cambiar de Grid Normal a Infinity Grid):
-- adxStrong: true si ADX > 25 (tendencia fuerte, no lateral)
-- btcStrong: true si BTC está en verde hoy y con momentum positivo
-- solAboveEMAs: true si precio SOL > EMA20 Y precio SOL > EMA50
-- volumeGrowing: true si el volumen de hoy es mayor al promedio reciente
+Reglas para transitionTrigger — MUY IMPORTANTE, evalúa con cuidado:
+- adxStrong: true si ADX > 25 (mercado en tendencia, no lateral/ranging)
+- btcStrong: true si BTC lleva 2+ días en verde con momentum, no solo rebote de un día
+- solAboveEMAs: true si precio SOL > EMA20 Y precio SOL > EMA50 simultáneamente
+- volumeGrowing: true si el volumen reciente es claramente mayor al promedio de los últimos 7 días
 - conditionsMet: cuenta cuántas son true (0-4)
-- recommendation: "CAMBIAR" si conditionsMet >= 3, "VIGILAR" si conditionsMet == 2, "MANTENER" si conditionsMet <= 1
-- action: texto corto de la acción recomendada
+- recommendation:
+    "CAMBIAR" si conditionsMet >= 3 → fase alcista confirmada, Grid Normal dejará dinero sobre la mesa, CAMBIAR A INFINITY URGENTE
+    "VIGILAR" si conditionsMet == 2 → señales mixtas, prepararse para cambiar en 24-48h
+    "MANTENER" si conditionsMet <= 1 → mercado lateral o bajista, Grid Normal es correcto
+- action: mensaje claro y directo. Si CAMBIAR, escribe exactamente qué hacer: "Apaga Grid Normal → Abre Infinity Grid con límite inferior en $X"
 
-Reglas para gridParams:
-- Infinity Grid: low = soporte más cercano o EMA50, high = null (pon 0 para indicar sin techo), grids = 20-25
-- Grid Normal: low = soporte fuerte, high = resistencia fuerte, grids = 25-40
-- spacing = (high - low) / grids redondeado a 2 decimales
+Reglas para gridParams (optimizado para gestión activa cada 2 días):
+- Grid Normal: low = precio_actual × 0.92, high = precio_actual × 1.08, grids = 15, spacing = (high-low)/15 redondeado a 2 decimales. SOLO si el soporte técnico más cercano está por debajo del low calculado, ajusta el low a ese soporte.
+- Infinity Grid: low = soporte más cercano o EMA50 (el más alto de los dos), high = 0 (sin techo), grids = 15, spacing = "2.5%"
+- En ambos casos spacing = (high - low) / grids redondeado a 2 decimales
 
 Responde SOLO el JSON.`;
 

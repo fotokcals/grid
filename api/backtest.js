@@ -31,15 +31,15 @@ export default async function handler(req, res) {
     const endPrice = candles[candles.length - 1].close;
     const priceChangePct = ((endPrice - startPrice) / startPrice) * 100;
 
-    // ── Grid Normal ──
-    const gnLow = periodLow * 0.97;
-    const gnHigh = periodHigh * 1.03;
-    const gnGrids = 25;
+    // ── Grid Normal — rango ±8%, 15 grids (optimizado para gestión cada 2 días) ──
+    const gnLow = startPrice * 0.92;
+    const gnHigh = startPrice * 1.08;
+    const gnGrids = 15;
     const normalResult = simulateGridNormal(candles, capital, gnLow, gnHigh, gnGrids, startPrice);
 
-    // ── Infinity Grid ──
-    const igLow = periodLow * 0.95;
-    const igGrids = 20;
+    // ── Infinity Grid — límite inferior ±8% abajo, 15 grids a 2.5% ──
+    const igLow = startPrice * 0.92;
+    const igGrids = 15;
     const infinityResult = simulateInfinityGrid(candles, capital, igLow, igGrids, 0.025, startPrice);
 
     // ── Buy & Hold ──
