@@ -888,11 +888,17 @@ TAREA:
   ]
 }
 
-Reglas para la señal:
-- OFF si: FOMC/CPI en menos de 24h, BTC cae >4% en el día, outage de Solana, noticias hawkish muy fuertes
-- PRECAUCION + Grid Normal si: mercado mixto, eventos en 2-5 días, BTC -2% a -4%
-- ON + Infinity Grid si: mercado alcista, BTC positivo, sin eventos macro en >7 días
-- ON + Grid Normal si: mercado lateral/neutral, sin eventos inmediatos pero contexto incierto
+PASO 1 — Determina el régimen de mercado usando técnicos:
+- ALCISTA: precio SOL > EMA20 > EMA50, RSI entre 50-70, BTC en verde → candidato Infinity Grid
+- LATERAL: precio SOL entre EMA20 y EMA50, RSI entre 40-60, sin tendencia clara → candidato Grid Normal
+- BAJISTA: precio SOL < EMA50, RSI < 45 o bajando, BTC en rojo → candidato PRECAUCION u OFF
+- INCERTIDUMBRE_MACRO: evento macro de alto impacto en menos de 5 días → override a PRECAUCION o OFF
+
+PASO 2 — Aplica estas reglas duras (tienen prioridad sobre técnicos):
+- OFF obligatorio si: FOMC/CPI en menos de 24h, BTC cae >4% en el día, outage de Solana activo, noticias hawkish extremas
+- PRECAUCION + Grid Normal si: evento macro en 2-5 días, BTC -2% a -4%, RSI >70 (sobrecomprado)
+- ON + Infinity Grid si: régimen ALCISTA confirmado por técnicos + macro sin eventos en >7 días
+- ON + Grid Normal si: régimen LATERAL o macro incierto pero técnicos no bearish
 
 Reglas para gridParams:
 - Infinity Grid: low = soporte más cercano o EMA50, high = null (pon 0 para indicar sin techo), grids = 20-25
