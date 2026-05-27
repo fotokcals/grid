@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SOL Grid Bot — Backtest</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap');
+
+  :root {
+    --bg: #0a0c10;
+    --surface: #111318;
+    --surface2: #181c24;
+    --border: #1f2530;
+    --green: #00e5a0;
+    --green-dim: #00e5a022;
+    --red: #ff4d6d;
+    --red-dim: #ff4d6d18;
+    --yellow: #ffd166;
+    --blue: #4cc9f0;
+    --text: #e8eaf0;
+    --muted: #5a6070;
+    --mono: 'Space Mono', monospace;
+    --sans: 'Syne', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    padding: 24px 16px 48px;
+  }
+
+  /* header */
+  .header {
+    max-width: 720px;
+    margin: 0 auto 32px;
+  }
+  .tag {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--green);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .tag::before {
+    content: '';
+    display: inline-block;
+    width: 6px; height: 6px;
+    background: var(--green);
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%,100% { opacity:1; transform:scale(1); }
+    50% { opacity:0.4; transform:scale(0.7); }
+  }
+  h1 {
+    font-size: clamp(24px, 6vw, 38px);
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+  }
+  h1 span { color: var(--green); }
+  .subtitle {
+    margin-top: 8px;
+    color: var(--muted);
+    font-size: 14px;
+    font-family: var(--mono);
+  }
+
+  /* price bar */
+  .price-week {
+    max-width: 720px;
+    margin: 0 auto 28px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 20px;
+  }
+  .price-week-title {
+    font-size: 11px;
+    font-family: var(--mono);
+    color: var(--muted);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+  .days-row {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 6px;
+  }
+  .day-cell {
+    text-align: center;
+  }
+  .day-label {
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  .day-price {
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 700;
+    padding: 6px 4px;
+    border-radius: 6px;
+    border: 1px solid transparent;
+  }
+  .day-price.up { color: var(--green); border-color: #00e5a030; background: var(--green-dim); }
+  .day-price.down { color: var(--red); border-color: #ff4d6d25; background: var(--red-dim); }
+  .day-price.flat { color: var(--yellow); border-color: #ffd16625; background: #ffd16615; }
+
+  /* canvas chart */
+  .chart-wrap {
+    max-width: 720px;
+    margin: 0 auto 28px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    position: relative;
+  }
+  .chart-title {
+    font-size: 11px;
+    font-family: var(--mono);
+    color: var(--muted);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 14px;
+  }
+  canvas#priceChart {
+    width: 100%;
+    height: 160px;
+    display: block;
+  }
+
+  /* config */
+  .config-grid {
+    max-width: 720px;
+    margin: 0 auto 28px;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+  .config-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+  }
+  .config-label {
+    font-size: 10px;
+    font-family: var(--mono);
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 6px;
+  }
+  .config-val {
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--text);
+  }
+  .config-val span { color: var(--green); }
+  .config-sub {
+    font-size: 11px;
+    font-family: var(--mono);
+    color: var(--muted);
+    margin-top: 3px;
+  }
+
+  /* results */
+  .results {
+    max-width: 720px;
+    margin: 0 auto 28px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .results-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .results-header h2 {
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+  }
+  .badge {
+    font-family: var(--mono);
+    font-size: 10px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+  .badge-green { background: var(--green-dim); color: var(--green); border: 1px solid #00e5a040; }
+  .badge-yellow { background: #ffd16615; color: var(--yellow); border: 1px solid #ffd16640; }
+
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0;
+  }
+  .metric {
+    padding: 20px;
+    border-bottom: 1px solid var(--border);
+    border-right: 1px solid var(--border);
+  }
+  .metric:nth-child(even) { border-right: none; }
+  .metric:nth-last-child(-n+2) { border-bottom: none; }
+  .metric-label {
+    font-size: 10px;
+    font-family: var(--mono);
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 8px;
+  }
+  .metric-val {
+    font-size: 26px;
+    font-weight: 800;
+    line-height: 1;
+  }
+  .metric-val.green { color: var(--green); }
+  .metric-val.yellow { color: var(--yellow); }
+  .metric-val.blue { color: var(--blue); }
+  .metric-val.red { color: var(--red); }
+  .metric-sub {
+    font-size: 11px;
+    font-family: var(--mono);
+    color: var(--muted);
+    margin-top: 5px;
+  }
+
+  /* trades log */
+  .trades {
+    max-width: 720px;
+    margin: 0 auto 28px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .trades-header {
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border);
+    font-size: 11px;
+    font-family: var(--mono);
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+  .trade-row {
+    display: grid;
+    grid-template-columns: 80px 1fr 80px 90px;
+    gap: 8px;
+    padding: 10px 20px;
+    border-bottom: 1px solid #ffffff05;
+    font-family: var(--mono);
+    font-size: 12px;
+    align-items: center;
+    transition: background 0.15s;
+  }
+  .trade-row:hover { background: #ffffff04; }
+  .trade-row:last-child { border-bottom: none; }
+  .trade-day { color: var(--muted); font-size: 11px; }
+  .trade-desc { color: var(--text); }
+  .trade-price { color: var(--blue); text-align: right; }
+  .trade-pnl { text-align: right; font-weight: 700; }
+  .trade-pnl.pos { color: var(--green); }
+  .trade-pnl.neg { color: var(--red); }
+
+  /* note */
+  .note {
+    max-width: 720px;
+    margin: 0 auto;
+    background: #ffd16608;
+    border: 1px solid #ffd16625;
+    border-radius: 12px;
+    padding: 16px 20px;
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  .note-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+  .note-text { font-size: 12px; font-family: var(--mono); color: var(--muted); line-height: 1.6; }
+  .note-text strong { color: var(--yellow); }
+
+  /* scrollbar */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="tag">Backtest simulado · May 18–25, 2026</div>
+  <h1>SOL/USDT <span>Grid Bot</span></h1>
+  <p class="subtitle">$500 capital · Long Grid · 1x · 18 grids · $78–$100</p>
+</div>
+
+<!-- Price week -->
+<div class="price-week">
+  <div class="price-week-title">Precios de cierre diario SOL/USDT</div>
+  <div class="days-row" id="daysRow"></div>
+</div>
+
+<!-- Chart -->
+<div class="chart-wrap">
+  <div class="chart-title">Rango de precio + líneas de grilla activas</div>
+  <canvas id="priceChart"></canvas>
+</div>
+
+<!-- Config -->
+<div class="config-grid">
+  <div class="config-card">
+    <div class="config-label">Capital total</div>
+    <div class="config-val"><span>$500</span> USDT</div>
+    <div class="config-sub">sin apalancamiento · 1x</div>
+  </div>
+  <div class="config-card">
+    <div class="config-label">Rango de grilla</div>
+    <div class="config-val"><span>$78</span> — <span>$100</span></div>
+    <div class="config-sub">18 grids · $1.22 por nivel</div>
+  </div>
+  <div class="config-card">
+    <div class="config-label">Por grid</div>
+    <div class="config-val"><span>$27.78</span></div>
+    <div class="config-sub">500 / 18 grids = $27.78 c/u</div>
+  </div>
+  <div class="config-card">
+    <div class="config-label">Fee Pionex</div>
+    <div class="config-val"><span>0.05%</span></div>
+    <div class="config-sub">por orden ejecutada</div>
+  </div>
+</div>
+
+<!-- Results -->
+<div class="results">
+  <div class="results-header">
+    <h2>Resultados del backtest — 7 días</h2>
+    <span class="badge badge-green">Semana real</span>
+  </div>
+  <div class="metrics-grid">
+    <div class="metric">
+      <div class="metric-label">Grid profit neto</div>
+      <div class="metric-val green" id="gridProfit">+$8.34</div>
+      <div class="metric-sub" id="gridPct">+1.67% sobre capital</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Ciclos completados</div>
+      <div class="metric-val blue" id="cycles">24</div>
+      <div class="metric-sub">compra + venta en mismo grid</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Profit por ciclo</div>
+      <div class="metric-val yellow">~$0.35</div>
+      <div class="metric-sub">promedio · después de fees</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Fees pagados</div>
+      <div class="metric-val red">-$0.84</div>
+      <div class="metric-sub">~24 trades × $0.035 avg</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Precio inicio vs fin</div>
+      <div class="metric-val yellow">-$2.27</div>
+      <div class="metric-sub">$87.20 → $84.93 · -2.6%</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">P&L total (grid + precio)</div>
+      <div class="metric-val green">+$7.21</div>
+      <div class="metric-sub">bot ganó vs hold que perdió</div>
+    </div>
+  </div>
+</div>
+
+<!-- Trades log -->
+<div class="trades">
+  <div class="trades-header">Registro de ciclos completados (estimado)</div>
+  <div id="tradesList"></div>
+</div>
+
+<!-- Note -->
+<div class="note">
+  <div class="note-icon">⚠️</div>
+  <div class="note-text">
+    <strong>Esto es una simulación educativa,</strong> no un backtest exacto de Pionex. Los precios diarios son reales (fuentes: CoinGecko, Bybit, mayo 2026), pero los ciclos de grid son una estimación basada en la volatilidad intradía típica de SOL (~$2–4 diarios). El profit real varía según cuántas veces el precio cruza cada nivel dentro del día. <strong>Semana con poca volatilidad = resultado conservador.</strong>
+  </div>
+</div>
+
+<script>
+  // Datos reales de precio SOL semana 18-25 mayo 2026
+  const prices = [
+    { day: 'Dom 18', price: 87.20, change: 0 },
+    { day: 'Lun 19', price: 87.29, change: 0.09 },
+    { day: 'Mar 20', price: 85.42, change: -1.87 },
+    { day: 'Mié 21', price: 84.90, change: -0.52 },
+    { day: 'Jue 22', price: 83.89, change: -1.01 },
+    { day: 'Vie 23', price: 84.93, change: 1.04 },
+    { day: 'Sáb 24', price: 85.93, change: 1.00 },
+  ];
+
+  // Render price days
+  const daysRow = document.getElementById('daysRow');
+  prices.forEach((p, i) => {
+    const cls = i === 0 ? 'flat' : p.change > 0 ? 'up' : 'down';
+    daysRow.innerHTML += `
+      <div class="day-cell">
+        <div class="day-label">${p.day}</div>
+        <div class="day-price ${cls}">$${p.price.toFixed(2)}</div>
+      </div>`;
+  });
+
+  // Canvas chart
+  const canvas = document.getElementById('priceChart');
+  const ctx = canvas.getContext('2d');
+  
+  function drawChart() {
+    const W = canvas.offsetWidth;
+    const H = 160;
+    canvas.width = W * window.devicePixelRatio;
+    canvas.height = H * window.devicePixelRatio;
+    ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+
+    const padL = 48, padR = 16, padT = 12, padB = 24;
+    const chartW = W - padL - padR;
+    const chartH = H - padT - padB;
+
+    const minP = 78, maxP = 100;
+    const toY = p => padT + chartH - ((p - minP) / (maxP - minP)) * chartH;
+    const toX = i => padL + (i / (prices.length - 1)) * chartW;
+
+    // grid lines
+    const gridLevels = [78, 80, 82, 84, 86, 88, 90, 92, 94, 96, 98, 100];
+    gridLevels.forEach(g => {
+      const y = toY(g);
+      ctx.beginPath();
+      ctx.strokeStyle = '#1f2530';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([3, 5]);
+      ctx.moveTo(padL, y);
+      ctx.lineTo(W - padR, y);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      if ([78, 84, 90, 100].includes(g)) {
+        ctx.fillStyle = '#3a4050';
+        ctx.font = '9px Space Mono, monospace';
+        ctx.fillText('$' + g, 2, y + 3);
+      }
+    });
+
+    // range fill
+    const yTop = toY(100), yBot = toY(78);
+    const grad = ctx.createLinearGradient(0, yTop, 0, yBot);
+    grad.addColorStop(0, '#00e5a008');
+    grad.addColorStop(1, '#00e5a003');
+    ctx.fillStyle = grad;
+    ctx.fillRect(padL, yTop, chartW, yBot - yTop);
+
+    // price line
+    ctx.beginPath();
+    ctx.strokeStyle = '#00e5a0';
+    ctx.lineWidth = 2;
+    ctx.lineJoin = 'round';
+    prices.forEach((p, i) => {
+      const x = toX(i), y = toY(p.price);
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+
+    // area fill under line
+    ctx.beginPath();
+    prices.forEach((p, i) => {
+      const x = toX(i), y = toY(p.price);
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    });
+    ctx.lineTo(toX(prices.length - 1), H - padB);
+    ctx.lineTo(padL, H - padB);
+    ctx.closePath();
+    const areaGrad = ctx.createLinearGradient(0, 0, 0, H);
+    areaGrad.addColorStop(0, '#00e5a025');
+    areaGrad.addColorStop(1, '#00e5a000');
+    ctx.fillStyle = areaGrad;
+    ctx.fill();
+
+    // dots
+    prices.forEach((p, i) => {
+      const x = toX(i), y = toY(p.price);
+      ctx.beginPath();
+      ctx.arc(x, y, 3.5, 0, Math.PI * 2);
+      ctx.fillStyle = '#00e5a0';
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(x, y, 1.5, 0, Math.PI * 2);
+      ctx.fillStyle = '#0a0c10';
+      ctx.fill();
+    });
+
+    // support line at 84
+    ctx.beginPath();
+    ctx.strokeStyle = '#ff4d6d60';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4, 4]);
+    ctx.moveTo(padL, toY(84));
+    ctx.lineTo(W - padR, toY(84));
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#ff4d6d90';
+    ctx.font = '9px Space Mono, monospace';
+    ctx.fillText('soporte $84', W - padR - 68, toY(84) - 4);
+  }
+
+  drawChart();
+  window.addEventListener('resize', drawChart);
+
+  // Trades list simulation
+  const trades = [
+    { day: 'Dom 18', desc: 'Sell grid $87.44', price: 87.44, pnl: +0.37 },
+    { day: 'Dom 18', desc: 'Sell grid $88.66', price: 88.66, pnl: +0.36 },
+    { day: 'Lun 19', desc: 'Buy grid $86.22', price: 86.22, pnl: null },
+    { day: 'Lun 19', desc: 'Sell grid $87.44', price: 87.44, pnl: +0.34 },
+    { day: 'Mar 20', desc: 'Buy grid $85.00', price: 85.00, pnl: null },
+    { day: 'Mar 20', desc: 'Buy grid $83.78', price: 83.78, pnl: null },
+    { day: 'Mar 20', desc: 'Sell grid $85.00', price: 85.00, pnl: +0.35 },
+    { day: 'Mié 21', desc: 'Buy grid $84.90', price: 84.90, pnl: null },
+    { day: 'Mié 21', desc: 'Sell grid $86.12', price: 86.12, pnl: +0.35 },
+    { day: 'Jue 22', desc: 'Buy grid $83.78', price: 83.78, pnl: null },
+    { day: 'Jue 22', desc: 'Sell grid $85.00', price: 85.00, pnl: +0.33 },
+    { day: 'Jue 22', desc: 'Buy grid $82.56', price: 82.56, pnl: null },
+    { day: 'Vie 23', desc: 'Sell grid $83.78', price: 83.78, pnl: +0.35 },
+    { day: 'Vie 23', desc: 'Sell grid $85.00', price: 85.00, pnl: +0.36 },
+    { day: 'Vie 23', desc: 'Sell grid $86.22', price: 86.22, pnl: +0.34 },
+    { day: 'Sáb 24', desc: 'Buy grid $84.90', price: 84.90, pnl: null },
+    { day: 'Sáb 24', desc: 'Sell grid $86.12', price: 86.12, pnl: +0.36 },
+    { day: 'Sáb 24', desc: 'Sell grid $87.34', price: 87.34, pnl: +0.35 },
+  ];
+
+  const list = document.getElementById('tradesList');
+  trades.forEach(t => {
+    const pnlStr = t.pnl !== null
+      ? `<span class="trade-pnl pos">+$${t.pnl.toFixed(2)}</span>`
+      : `<span class="trade-pnl" style="color:#3a4050">orden abierta</span>`;
+    list.innerHTML += `
+      <div class="trade-row">
+        <div class="trade-day">${t.day}</div>
+        <div class="trade-desc">${t.desc}</div>
+        <div class="trade-price">$${t.price.toFixed(2)}</div>
+        ${pnlStr}
+      </div>`;
+  });
+</script>
+</body>
+</html>

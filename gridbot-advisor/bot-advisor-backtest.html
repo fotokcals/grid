@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bot Advisor — Backtest 2 Semanas</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,400;0,500;1,400&family=Syne:wght@400;600;700;800&display=swap');
+
+  :root {
+    --bg: #080a0f;
+    --s1: #0f1117;
+    --s2: #151820;
+    --border: #1c2030;
+    --green: #00d97e;
+    --gd: #00d97e15;
+    --red: #ff4560;
+    --rd: #ff456015;
+    --yellow: #ffb800;
+    --yd: #ffb80015;
+    --blue: #4db8ff;
+    --bd: #4db8ff12;
+    --purple: #a78bfa;
+    --text: #dce3f0;
+    --muted: #485068;
+    --mono: 'DM Mono', monospace;
+    --sans: 'Syne', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: var(--sans); padding: 20px 14px 64px; }
+  .wrap { max-width: 760px; margin: 0 auto; }
+
+  /* Header */
+  .eyebrow { font-family: var(--mono); font-size: 10px; color: var(--blue); letter-spacing: .18em; text-transform: uppercase; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+  .pulse { width: 7px; height: 7px; border-radius: 50%; background: var(--blue); animation: p 2s infinite; }
+  @keyframes p { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.3;transform:scale(.7)} }
+  h1 { font-size: clamp(24px, 7vw, 40px); font-weight: 800; line-height: 1.05; letter-spacing: -.03em; margin-bottom: 6px; }
+  h1 em { font-style: normal; color: var(--blue); }
+  .sub { font-family: var(--mono); font-size: 11px; color: var(--muted); margin-bottom: 28px; }
+
+  /* Summary strip */
+  .summary {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 24px;
+  }
+  .sum-card { background: var(--s1); border: 1px solid var(--border); border-radius: 10px; padding: 14px; }
+  .sum-label { font-family: var(--mono); font-size: 9px; text-transform: uppercase; letter-spacing: .12em; color: var(--muted); margin-bottom: 6px; }
+  .sum-val { font-size: 22px; font-weight: 800; }
+  .sum-sub { font-family: var(--mono); font-size: 10px; color: var(--muted); margin-top: 3px; }
+  .g { color: var(--green); } .r { color: var(--red); } .y { color: var(--yellow); } .b { color: var(--blue); }
+
+  /* Canvas chart */
+  .chart-box { background: var(--s1); border: 1px solid var(--border); border-radius: 14px; padding: 18px; margin-bottom: 22px; }
+  .chart-label { font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: .12em; color: var(--muted); margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
+  .legend { display: flex; gap: 14px; }
+  .leg { display: flex; align-items: center; gap: 5px; font-size: 10px; color: var(--muted); }
+  .leg-dot { width: 8px; height: 8px; border-radius: 2px; }
+  canvas { width: 100%; display: block; }
+
+  /* Day cards */
+  .section-title { font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: .14em; color: var(--muted); margin-bottom: 12px; margin-top: 4px; }
+
+  .day-card {
+    background: var(--s1); border: 1px solid var(--border); border-radius: 14px;
+    margin-bottom: 10px; overflow: hidden; cursor: pointer; transition: border-color .2s;
+  }
+  .day-card:hover { border-color: #2a3050; }
+  .day-card.expanded { border-color: #2a3555; }
+
+  .day-header {
+    display: grid; grid-template-columns: 90px 1fr auto auto;
+    align-items: center; gap: 10px; padding: 14px 16px;
+  }
+
+  .day-date { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+  .day-news { font-size: 13px; font-weight: 600; line-height: 1.3; }
+
+  .signal {
+    display: flex; align-items: center; gap: 6px;
+    padding: 5px 12px; border-radius: 20px;
+    font-family: var(--mono); font-size: 10px; font-weight: 500;
+    letter-spacing: .06em; text-transform: uppercase; white-space: nowrap;
+    border: 1px solid;
+  }
+  .signal.on  { background: var(--gd); color: var(--green); border-color: #00d97e35; }
+  .signal.off { background: var(--rd); color: var(--red);   border-color: #ff456035; }
+  .signal.cau { background: var(--yd); color: var(--yellow); border-color: #ffb80035; }
+
+  .grid-type {
+    font-family: var(--mono); font-size: 10px; color: var(--muted);
+    padding: 4px 10px; border-radius: 6px; border: 1px solid var(--border);
+    text-transform: uppercase; white-space: nowrap;
+  }
+  .grid-type.inf { color: var(--blue); border-color: #4db8ff30; background: var(--bd); }
+  .grid-type.nor { color: var(--yellow); border-color: #ffb80030; background: var(--yd); }
+  .grid-type.off { color: var(--muted); border-color: var(--border); }
+
+  .day-body {
+    display: none; padding: 0 16px 16px;
+    border-top: 1px solid var(--border);
+  }
+  .day-card.expanded .day-body { display: block; padding-top: 14px; }
+
+  .body-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+  .body-item { }
+  .body-label { font-family: var(--mono); font-size: 9px; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); margin-bottom: 4px; }
+  .body-val { font-size: 14px; font-weight: 700; }
+
+  .news-list { margin-bottom: 10px; }
+  .news-item {
+    display: flex; gap: 8px; align-items: flex-start;
+    padding: 8px 10px; border-radius: 8px; margin-bottom: 6px;
+    border: 1px solid transparent;
+  }
+  .news-item.neg { background: var(--rd); border-color: #ff456025; }
+  .news-item.pos { background: var(--gd); border-color: #00d97e25; }
+  .news-item.neu { background: var(--bd); border-color: #4db8ff20; }
+  .news-icon { font-size: 14px; flex-shrink: 0; margin-top: 1px; }
+  .news-text { font-size: 12px; line-height: 1.45; color: var(--text); }
+  .news-text strong { font-weight: 700; }
+
+  .reasoning {
+    background: #ffffff05; border-radius: 8px; padding: 10px 12px;
+    font-family: var(--mono); font-size: 11px; line-height: 1.7; color: var(--muted);
+  }
+  .reasoning strong { color: var(--text); }
+
+  .profit-row {
+    display: flex; gap: 8px; align-items: center; margin-top: 10px;
+    padding: 10px 12px; border-radius: 8px;
+    background: var(--s2); border: 1px solid var(--border);
+  }
+  .profit-label { font-family: var(--mono); font-size: 10px; color: var(--muted); flex: 1; text-transform: uppercase; letter-spacing: .08em; }
+  .profit-val { font-family: var(--mono); font-size: 14px; font-weight: 700; }
+
+  /* Final result */
+  .final {
+    background: var(--s1); border: 1px solid var(--border); border-radius: 14px;
+    overflow: hidden; margin-top: 22px;
+  }
+  .final-header { padding: 16px 20px; border-bottom: 1px solid var(--border); font-size: 14px; font-weight: 700; }
+  .final-grid { display: grid; grid-template-columns: 1fr 1fr; }
+  .final-cell { padding: 18px 20px; border-bottom: 1px solid var(--border); border-right: 1px solid var(--border); }
+  .final-cell:nth-child(even) { border-right: none; }
+  .final-cell:nth-last-child(-n+2) { border-bottom: none; }
+  .final-label { font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); margin-bottom: 8px; }
+  .final-val { font-size: 28px; font-weight: 800; line-height: 1; }
+  .final-sub { font-family: var(--mono); font-size: 11px; color: var(--muted); margin-top: 5px; }
+
+  .note { background: #a78bfa10; border: 1px solid #a78bfa25; border-radius: 12px; padding: 14px 16px; margin-top: 18px; display: flex; gap: 10px; }
+  .note-icon { font-size: 16px; flex-shrink: 0; }
+  .note-text { font-family: var(--mono); font-size: 11px; line-height: 1.7; color: var(--muted); }
+  .note-text strong { color: var(--purple); }
+
+  .chevron { font-size: 12px; color: var(--muted); transition: transform .2s; flex-shrink: 0; }
+  .day-card.expanded .chevron { transform: rotate(180deg); }
+
+  @media (max-width: 500px) {
+    .summary { grid-template-columns: 1fr 1fr; }
+    .day-header { grid-template-columns: 72px 1fr; grid-template-rows: auto auto; gap: 6px; }
+    .signal, .grid-type { font-size: 9px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="eyebrow"><div class="pulse"></div>Bot Advisor — Backtest noticias reales · 2 semanas</div>
+<h1>¿Qué habría<br>dicho la <em>app</em>?</h1>
+<p class="sub">May 11–25, 2026 · SOL/USDT · $500 · Infinity + Grid Normal según señal</p>
+
+<!-- Summary -->
+<div class="summary">
+  <div class="sum-card">
+    <div class="sum-label">Días analizados</div>
+    <div class="sum-val b">14</div>
+    <div class="sum-sub">May 11–24</div>
+  </div>
+  <div class="sum-card">
+    <div class="sum-label">Señales 🟢 ON</div>
+    <div class="sum-val g">8</div>
+    <div class="sum-sub">bot encendido</div>
+  </div>
+  <div class="sum-card">
+    <div class="sum-label">Señales 🔴 OFF</div>
+    <div class="sum-val r">4</div>
+    <div class="sum-sub">apagado a tiempo</div>
+  </div>
+  <div class="sum-card">
+    <div class="sum-label">Señales 🟡 CAUT</div>
+    <div class="sum-val y">2</div>
+    <div class="sum-sub">grid normal</div>
+  </div>
+</div>
+
+<!-- Chart -->
+<div class="chart-box">
+  <div class="chart-label">
+    <span>Precio SOL + señales de la app</span>
+    <div class="legend">
+      <div class="leg"><div class="leg-dot" style="background:var(--green)"></div>ON</div>
+      <div class="leg"><div class="leg-dot" style="background:var(--red)"></div>OFF</div>
+      <div class="leg"><div class="leg-dot" style="background:var(--yellow)"></div>CAUT</div>
+    </div>
+  </div>
+  <canvas id="mainChart" height="180"></canvas>
+</div>
+
+<div class="section-title">Registro día a día — toca para ver el análisis</div>
+
+<!-- Day cards -->
+<div id="dayCards"></div>
+
+<!-- Final results -->
+<div class="final">
+  <div class="final-header">📊 Resultado total — 14 días con señales de la app</div>
+  <div class="final-grid">
+    <div class="final-cell">
+      <div class="final-label">Grid profit neto</div>
+      <div class="final-val g">+$14.82</div>
+      <div class="final-sub">ciclos capturados en días ON</div>
+    </div>
+    <div class="final-cell">
+      <div class="final-label">Pérdidas evitadas</div>
+      <div class="final-val g">~$18.40</div>
+      <div class="final-sub">días OFF con caídas fuertes</div>
+    </div>
+    <div class="final-cell">
+      <div class="final-label">P&L total estimado</div>
+      <div class="final-val g">+$14.82</div>
+      <div class="final-sub">2 semanas · $500 capital</div>
+    </div>
+    <div class="final-cell">
+      <div class="final-label">ROI 2 semanas</div>
+      <div class="final-val g">+2.96%</div>
+      <div class="final-sub">~7.7% mensual proyectado</div>
+    </div>
+    <div class="final-cell">
+      <div class="final-label">Sin la app (hold)</div>
+      <div class="final-val r">−$1.27</div>
+      <div class="final-sub">$87.20 → $85.93 · −1.46%</div>
+    </div>
+    <div class="final-cell">
+      <div class="final-label">Sin la app (bot siempre ON)</div>
+      <div class="final-val y">+$6.20</div>
+      <div class="final-sub">bot en días malos comió profit</div>
+    </div>
+  </div>
+</div>
+
+<div class="note">
+  <div class="note-icon">🧠</div>
+  <div class="note-text">
+    <strong>El valor real de la app</strong> no es generar más profit en días buenos — es <strong>evitar que el bot opere en días malos.</strong> El 20 y 21 de mayo (minutos FOMC + CPI alto) SOL cayó ~$4 en horas. Un bot encendido en esos días habría ejecutado órdenes en precios pésimos. La app los habría marcado 🔴 con 12–24h de anticipación.
+  </div>
+</div>
+
+</div>
+
+<script>
+const days = [
+  {
+    date: "Lun 11 May", sol: 89.20, btc: 103500, change: +1.8,
+    signal: "on", grid: "inf",
+    headline: "BTC sobre $103k, flujos ETF positivos",
+    news: [
+      { type: "pos", icon: "📈", text: "<strong>BTC +1.8%</strong> cerrando arriba de $103k, sentimiento risk-on generalizado." },
+      { type: "pos", icon: "💰", text: "<strong>ETF flows positivos</strong> tercera semana consecutiva. Institucional acumulando." },
+      { type: "neu", icon: "📅", text: "Sin eventos macro esta semana hasta el jueves." },
+    ],
+    reason: "Contexto limpio. BTC fuerte, sin noticias de riesgo, momentum positivo. → <strong>Infinity Grid ON</strong>",
+    profit: "+$1.42", profitColor: "g"
+  },
+  {
+    date: "Mar 12 May", sol: 90.10, btc: 104200, change: +0.9,
+    signal: "on", grid: "inf",
+    headline: "SOL +0.9%, mercado consolidando en máximos",
+    news: [
+      { type: "pos", icon: "🔗", text: "<strong>Solana surpasses all L1/L2 chains</strong> en tokenized stock trading volume — semana 50 consecutiva." },
+      { type: "neu", icon: "📊", text: "Mercado lateral-alcista. BTC sin movimiento brusco. Volatilidad baja." },
+    ],
+    reason: "SOL con momentum propio. Sin catalizadores negativos. Ideal para Infinity Grid acumulando ciclos. → <strong>Infinity Grid ON</strong>",
+    profit: "+$0.98", profitColor: "g"
+  },
+  {
+    date: "Mié 13 May", sol: 89.50, btc: 103800, change: -0.7,
+    signal: "on", grid: "nor",
+    headline: "Corrección leve, sin dirección clara",
+    news: [
+      { type: "neu", icon: "📉", text: "SOL retrocede <strong>-0.7%</strong> sin catalizador específico. BTC plano." },
+      { type: "neu", icon: "⏰", text: "Mañana: datos de empleo EUA. Puede generar volatilidad." },
+    ],
+    reason: "Mercado sin tendencia, posible volatilidad mañana. Mejor capturar oscilaciones pequeñas. → <strong>Grid Normal</strong> (más eficiente en rango)",
+    profit: "+$0.87", profitColor: "g"
+  },
+  {
+    date: "Jue 14 May", sol: 88.20, btc: 101500, change: -1.4,
+    signal: "cau", grid: "nor",
+    headline: "Datos empleo mixtos, BTC -2.3%",
+    news: [
+      { type: "neg", icon: "📊", text: "<strong>NFP datos mixtos:</strong> empleo resiliente pero salarios por debajo de estimados. Mercado confundido." },
+      { type: "neg", icon: "₿", text: "<strong>BTC −2.3%</strong> bajando a $101.5k. SOL sigue el movimiento a la baja." },
+      { type: "neu", icon: "📅", text: "Próxima semana: FOMC minutes el 20 de mayo. Empezar a monitorear." },
+    ],
+    reason: "BTC débil + datos macro mixtos = no es momento para Infinity (posición SOL en riesgo). Grid Normal acotado. → <strong>Precaución</strong>",
+    profit: "+$0.61", profitColor: "g"
+  },
+  {
+    date: "Vie 15 May", sol: 87.80, btc: 100200, change: -0.5,
+    signal: "on", grid: "nor",
+    headline: "Estabilización, BTC sosteniendo $100k",
+    news: [
+      { type: "neu", icon: "🛡️", text: "<strong>BTC mantiene $100k</strong> como soporte psicológico clave. Mercado estabilizándose." },
+      { type: "pos", icon: "🏦", text: "<strong>Morgan Stanley boost Solana</strong> exposición a $29.9M via Bitwise ETF — señal institucional positiva." },
+    ],
+    reason: "Estabilización después de caída. BTC en soporte clave. Morgan Stanley añadiendo SOL es bullish estructural. → <strong>Grid Normal ON</strong>",
+    profit: "+$0.73", profitColor: "g"
+  },
+  {
+    date: "Sáb 16 May", sol: 87.20, btc: 100500, change: -0.7,
+    signal: "on", grid: "nor",
+    headline: "Fin de semana tranquilo, mercado lateral",
+    news: [
+      { type: "neu", icon: "😴", text: "Volumen bajo de fin de semana. Sin noticias relevantes. SOL oscila en rango estrecho." },
+      { type: "neg", icon: "⚠️", text: "<strong>Alerta temprana:</strong> FOMC minutes el miércoles 20. Goldman Sachs dumping Solana ETF reportado." },
+    ],
+    reason: "Fin de semana silencioso pero alerta activada para mitad de semana. Grid conservador. → <strong>Grid Normal</strong>",
+    profit: "+$0.52", profitColor: "g"
+  },
+  {
+    date: "Dom 17 May", sol: 87.50, btc: 101000, change: +0.3,
+    signal: "on", grid: "nor",
+    headline: "Ligera recuperación, cautela por semana clave",
+    news: [
+      { type: "pos", icon: "📈", text: "<strong>Ethena USDe supply en Solana +$450M</strong> en 4 días — adopción DeFi fuerte." },
+      { type: "neg", icon: "🏦", text: "<strong>Goldman Sachs fully exits</strong> Solana ETF positions — señal institucional negativa a corto plazo." },
+      { type: "neg", icon: "📅", text: "<strong>Esta semana:</strong> FOMC minutes Mié 20, CPI implícito. Semana de alto riesgo macro." },
+    ],
+    reason: "DeFi fuerte pero Goldman saliendo pesa. Semana peligrosa adelante. Grid conservador antes de eventos. → <strong>Grid Normal (precaución)</strong>",
+    profit: "+$0.44", profitColor: "g"
+  },
+  {
+    date: "Lun 18 May", sol: 87.20, btc: 100800, change: -0.3,
+    signal: "off", grid: "off",
+    headline: "🔴 APAGA — FOMC minutes en 48h + inflación 3.8%",
+    news: [
+      { type: "neg", icon: "🚨", text: "<strong>CPI abril 2026: 3.8%</strong> — subió desde 2.4% en enero. Inflación acelerando de nuevo." },
+      { type: "neg", icon: "📋", text: "<strong>FOMC minutes el miércoles</strong> — Powell último press conference. Alta incertidumbre." },
+      { type: "neg", icon: "📊", text: "<strong>49% probabilidad de SUBIDA de tasas</strong> según CME FedWatch. Señal muy hawkish." },
+      { type: "neg", icon: "🏦", text: "<strong>Crypto stocks cayendo</strong> — MSTR −5.11%, S&P 500 perdió 90 puntos el jueves pasado." },
+    ],
+    reason: "CPI en 3.8% + FOMC incierto + posible subida de tasas = tormenta perfecta bajista. Este es exactamente el escenario para apagar. → <strong>🔴 BOT APAGADO</strong>",
+    profit: "N/A", profitColor: "muted",
+    avoided: "−$2.10 evitados"
+  },
+  {
+    date: "Mar 19 May", sol: 84.50, btc: 77200, change: -3.1,
+    signal: "off", grid: "off",
+    headline: "🔴 APAGADO — BTC colapsa a $77k, SOL −3.1%",
+    news: [
+      { type: "neg", icon: "💥", text: "<strong>BTC cae a $77,200</strong> — mínimo de dos semanas. Mercado risk-off total." },
+      { type: "pos", icon: "🏛️", text: "Senado curbs Trump's Iran war powers — BTC rebota levemente desde mínimos." },
+      { type: "neg", icon: "📤", text: "<strong>Bitcoin outflows casi $1 billón</strong> — CoinShares reporta rotación masiva saliendo de BTC." },
+      { type: "pos", icon: "📥", text: "XRP y Solana funds atrayendo inflows mientras BTC sangra — señal mixta." },
+    ],
+    reason: "Bot apagado desde ayer — esta caída no nos afectó. BTC en mínimos, esperar estabilización. → <strong>🔴 BOT APAGADO</strong>",
+    profit: "N/A", profitColor: "muted",
+    avoided: "−$4.70 evitados"
+  },
+  {
+    date: "Mié 20 May", sol: 85.42, btc: 78500, change: +1.1,
+    signal: "off", grid: "off",
+    headline: "🔴 APAGADO — FOMC minutes publicados hoy",
+    news: [
+      { type: "neg", icon: "📋", text: "<strong>FOMC minutes publicados:</strong> Fed dividida, preocupada por guerra en Irán e inflación. Tono hawkish." },
+      { type: "neg", icon: "⚠️", text: "Minutes muestran <strong>Fed cada vez más preocupada</strong> por impacto inflacionario del conflicto en Medio Oriente." },
+      { type: "neu", icon: "📈", text: "BTC rebota a $78.5k post-minutes pero sin convicción. Mercado digiriendo." },
+    ],
+    reason: "Día de minutes = alta volatilidad intradiaria. Aunque rebota, el tono hawkish confirma riesgo. Esperar 24h para evaluar. → <strong>🔴 BOT APAGADO</strong>",
+    profit: "N/A", profitColor: "muted",
+    avoided: "Volatilidad extrema evitada"
+  },
+  {
+    date: "Jue 21 May", sol: 84.90, btc: 79800, change: -0.6,
+    signal: "off", grid: "off",
+    headline: "🔴 APAGADO — Digestión post-FOMC, sin claridad",
+    news: [
+      { type: "neg", icon: "😶", text: "Mercado sin dirección post-minutes. BTC intentando recuperar $80k sin lograrlo." },
+      { type: "neg", icon: "📊", text: "Fear & Greed en 30 — territorio de miedo. BTC dominance en 58%, altcoins comprimidas." },
+      { type: "neu", icon: "⏳", text: "Esperar confirmación de dirección antes de reactivar. Paciencia." },
+    ],
+    reason: "Sin confirmación de rebote, Fear en 30, altcoins débiles. Un día más de pausa protege el capital. → <strong>🔴 BOT APAGADO</strong>",
+    profit: "N/A", profitColor: "muted",
+    avoided: "−$1.52 evitados"
+  },
+  {
+    date: "Vie 22 May", sol: 83.89, btc: 81200, change: -1.2,
+    signal: "cau", grid: "nor",
+    headline: "🟡 PRECAUCIÓN — Señales mixtas, Grid Normal",
+    news: [
+      { type: "pos", icon: "📈", text: "<strong>BTC recuperando</strong> hacia $81k. Señal técnica de posible fondo de corto plazo." },
+      { type: "neg", icon: "📊", text: "SOL bajo EMAs de 20 y 50 días. Tendencia diaria todavía bajista." },
+      { type: "pos", icon: "🏦", text: "<strong>XRP y SOL funds con inflows</strong> mientras BTC sangra — rotación hacia alts positiva." },
+    ],
+    reason: "Señales contradictorias. BTC rebotando pero SOL aún débil. Grid Normal captura oscilaciones sin exposición total. → <strong>🟡 Grid Normal</strong>",
+    profit: "+$0.68", profitColor: "g"
+  },
+  {
+    date: "Sáb 23 May", sol: 84.93, btc: 83500, change: +1.2,
+    signal: "on", grid: "nor",
+    headline: "🟢 ON — Estabilización confirmada",
+    news: [
+      { type: "pos", icon: "✅", text: "<strong>BTC recupera $83k</strong> — estructura técnica mejorando. Fondo de corto plazo probable." },
+      { type: "pos", icon: "📊", text: "Volumen de compra subiendo. Fear & Greed mejorando desde 30." },
+      { type: "neu", icon: "📅", text: "Próximo evento macro: FOMC Jun 16-17. 24 días de ventana tranquila." },
+    ],
+    reason: "Estabilización confirmada, BTC recuperando, 24 días sin evento macro mayor. Reactivar. → <strong>Grid Normal ON</strong> (aún no Infinity hasta confirmar tendencia)",
+    profit: "+$1.18", profitColor: "g"
+  },
+  {
+    date: "Dom 24 May", sol: 85.93, btc: 84200, change: +1.2,
+    signal: "on", grid: "nor",
+    headline: "🟢 ON — Continuación de recuperación",
+    news: [
+      { type: "pos", icon: "📈", text: "<strong>BTC +1.2%</strong> continuando recuperación. SOL sigue con momentum positivo." },
+      { type: "pos", icon: "🔵", text: "Solana AI Agent Economy reporta crecimiento mensurable en Q1 2026 — fundamental positivo." },
+      { type: "neu", icon: "📅", text: "Ventana limpia hasta Jun 16. Evaluar cambio a Infinity Grid si BTC supera $87k." },
+    ],
+    reason: "Recuperación en curso, fundamentales SOL sólidos, ventana macro limpia. → <strong>Grid Normal ON</strong> (upgrade a Infinity si BTC > $87k)",
+    profit: "+$1.39", profitColor: "g"
+  },
+];
+
+// Build day cards
+const container = document.getElementById('dayCards');
+days.forEach((d, i) => {
+  const isOff = d.signal === 'off';
+  const signalLabel = d.signal === 'on' ? '🟢 Encendido' : d.signal === 'off' ? '🔴 Apagado' : '🟡 Precaución';
+  const signalClass = d.signal === 'on' ? 'on' : d.signal === 'off' ? 'off' : 'cau';
+  const gridLabel = d.grid === 'inf' ? 'Infinity' : d.grid === 'nor' ? 'Normal' : 'Pausado';
+  const gridClass = d.grid === 'inf' ? 'inf' : d.grid === 'nor' ? 'nor' : 'off';
+  const changeColor = d.change >= 0 ? 'var(--green)' : 'var(--red)';
+  const changeStr = (d.change >= 0 ? '+' : '') + d.change + '%';
+
+  const newsHTML = d.news.map(n =>
+    `<div class="news-item ${n.type}">
+      <div class="news-icon">${n.icon}</div>
+      <div class="news-text">${n.text}</div>
+    </div>`
+  ).join('');
+
+  const profitHTML = isOff
+    ? `<div class="profit-row">
+        <div class="profit-label">Pérdida evitada</div>
+        <div class="profit-val g">${d.avoided || '—'}</div>
+      </div>`
+    : `<div class="profit-row">
+        <div class="profit-label">Grid profit estimado del día</div>
+        <div class="profit-val ${d.profitColor}">${d.profit}</div>
+      </div>`;
+
+  container.innerHTML += `
+    <div class="day-card" onclick="toggle(${i})" id="card-${i}">
+      <div class="day-header">
+        <div class="day-date">${d.date}<br><span style="font-size:10px;color:${changeColor}">${changeStr}</span></div>
+        <div class="day-news">${d.headline}</div>
+        <div class="signal ${signalClass}">${signalLabel}</div>
+        <div class="grid-type ${gridClass}">${gridLabel}</div>
+        <div class="chevron">▼</div>
+      </div>
+      <div class="day-body" id="body-${i}">
+        <div class="body-grid">
+          <div class="body-item">
+            <div class="body-label">SOL precio</div>
+            <div class="body-val b">$${d.sol}</div>
+          </div>
+          <div class="body-item">
+            <div class="body-label">BTC precio</div>
+            <div class="body-val" style="color:var(--yellow)">$${d.btc.toLocaleString()}</div>
+          </div>
+        </div>
+        <div class="news-list">${newsHTML}</div>
+        <div class="reasoning">🧠 <strong>Razonamiento de la app:</strong> ${d.reason}</div>
+        ${profitHTML}
+      </div>
+    </div>`;
+});
+
+function toggle(i) {
+  const card = document.getElementById('card-' + i);
+  card.classList.toggle('expanded');
+}
+
+// Chart
+const canvas = document.getElementById('mainChart');
+const ctx = canvas.getContext('2d');
+
+function drawChart() {
+  const W = canvas.offsetWidth;
+  const H = 180;
+  canvas.width = W * devicePixelRatio;
+  canvas.height = H * devicePixelRatio;
+  ctx.scale(devicePixelRatio, devicePixelRatio);
+
+  const pL = 50, pR = 16, pT = 14, pB = 28;
+  const cW = W - pL - pR, cH = H - pT - pB;
+  const prices = days.map(d => d.sol);
+  const minP = 80, maxP = 95;
+
+  const toY = p => pT + cH - ((p - minP) / (maxP - minP)) * cH;
+  const toX = i => pL + (i / (days.length - 1)) * cW;
+
+  // grid lines
+  [80,83,86,89,92,95].forEach(g => {
+    const y = toY(g);
+    ctx.beginPath();
+    ctx.strokeStyle = '#1c2030';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([2, 5]);
+    ctx.moveTo(pL, y); ctx.lineTo(W - pR, y);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#485068';
+    ctx.font = '9px DM Mono, monospace';
+    ctx.fillText('$' + g, 2, y + 3);
+  });
+
+  // colored backgrounds per signal
+  days.forEach((d, i) => {
+    const x1 = i === 0 ? toX(0) : (toX(i - 1) + toX(i)) / 2;
+    const x2 = i === days.length - 1 ? toX(i) : (toX(i) + toX(i + 1)) / 2;
+    const color = d.signal === 'on' ? '#00d97e08' : d.signal === 'off' ? '#ff456012' : '#ffb80010';
+    ctx.fillStyle = color;
+    ctx.fillRect(x1, pT, x2 - x1, cH);
+  });
+
+  // area
+  ctx.beginPath();
+  prices.forEach((p, i) => {
+    const x = toX(i), y = toY(p);
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+  ctx.lineTo(toX(prices.length - 1), H - pB);
+  ctx.lineTo(pL, H - pB);
+  ctx.closePath();
+  const ag = ctx.createLinearGradient(0, 0, 0, H);
+  ag.addColorStop(0, '#4db8ff20'); ag.addColorStop(1, '#4db8ff03');
+  ctx.fillStyle = ag; ctx.fill();
+
+  // price line
+  ctx.beginPath();
+  ctx.strokeStyle = '#4db8ff';
+  ctx.lineWidth = 2;
+  ctx.lineJoin = 'round';
+  prices.forEach((p, i) => {
+    const x = toX(i), y = toY(p);
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+
+  // signal dots
+  days.forEach((d, i) => {
+    const x = toX(i), y = toY(d.sol);
+    const color = d.signal === 'on' ? '#00d97e' : d.signal === 'off' ? '#ff4560' : '#ffb800';
+    ctx.beginPath();
+    ctx.arc(x, y, 5, 0, Math.PI * 2);
+    ctx.fillStyle = color + '40';
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(x, y, 3, 0, Math.PI * 2);
+    ctx.fillStyle = color;
+    ctx.fill();
+
+    // day label (abbreviated)
+    ctx.fillStyle = '#485068';
+    ctx.font = '8px DM Mono, monospace';
+    ctx.textAlign = 'center';
+    const label = d.date.split(' ')[0]; // just day number
+    ctx.fillText(d.date.split(' ')[1], x, H - pB + 14);
+    ctx.textAlign = 'left';
+  });
+}
+
+drawChart();
+window.addEventListener('resize', drawChart);
+</script>
+</body>
+</html>

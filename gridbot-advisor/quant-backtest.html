@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Backtest Cuantitativo — Score System</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,600;1,400&family=Barlow:wght@300;400;500;600;700;800&display=swap');
+
+:root {
+  --bg: #05060a;
+  --s1: #0b0d13;
+  --s2: #10131c;
+  --s3: #161a26;
+  --border: #1a1f30;
+  --border2: #222840;
+  --green: #00ff88;
+  --gd: #00ff8810;
+  --gb: #00ff8828;
+  --red: #ff2d55;
+  --rd: #ff2d5510;
+  --rb: #ff2d5528;
+  --yellow: #ffd60a;
+  --yd: #ffd60a10;
+  --yb: #ffd60a28;
+  --blue: #0af0ff;
+  --bd: #0af0ff10;
+  --purple: #bf5fff;
+  --text: #c8d8f0;
+  --muted: #3a4560;
+  --mono: 'IBM Plex Mono', monospace;
+  --sans: 'Barlow', sans-serif;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: var(--sans); padding: 20px 14px 72px; }
+.wrap { max-width: 740px; margin: 0 auto; }
+
+/* scanline effect */
+body::after {
+  content: '';
+  position: fixed; inset: 0; pointer-events: none; z-index: 999;
+  background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,.03) 2px, rgba(0,0,0,.03) 4px);
+}
+
+/* header */
+.eyebrow { font-family: var(--mono); font-size: 10px; color: var(--blue); letter-spacing: .2em; text-transform: uppercase; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+.live-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--blue); animation: blink 1.5s infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.2} }
+h1 { font-size: clamp(22px,6vw,38px); font-weight: 800; line-height: 1.05; letter-spacing: -.02em; margin-bottom: 6px; }
+h1 em { font-style: normal; color: var(--blue); }
+.sub { font-family: var(--mono); font-size: 11px; color: var(--muted); margin-bottom: 26px; line-height: 1.6; }
+
+/* top KPIs */
+.kpis { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; margin-bottom: 22px; }
+.kpi { background: var(--s1); border: 1px solid var(--border); border-radius: 10px; padding: 13px; }
+.kpi-label { font-family: var(--mono); font-size: 9px; text-transform: uppercase; letter-spacing: .12em; color: var(--muted); margin-bottom: 6px; }
+.kpi-val { font-size: 22px; font-weight: 800; line-height: 1; }
+.kpi-sub { font-family: var(--mono); font-size: 9px; color: var(--muted); margin-top: 4px; }
+.g { color: var(--green); } .r { color: var(--red); } .y { color: var(--yellow); } .b { color: var(--blue); } .p { color: var(--purple); }
+
+/* score chart */
+.chart-card { background: var(--s1); border: 1px solid var(--border); border-radius: 14px; padding: 18px; margin-bottom: 18px; }
+.chart-title { font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: .14em; color: var(--muted); margin-bottom: 14px; display: flex; justify-content: space-between; }
+.chart-legend { display: flex; gap: 12px; }
+.leg { display: flex; align-items: center; gap: 4px; font-size: 10px; color: var(--muted); }
+.leg-dot { width: 8px; height: 8px; border-radius: 2px; }
+canvas { width: 100%; display: block; }
+
+/* day table */
+.table-card { background: var(--s1); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; margin-bottom: 18px; }
+.table-head {
+  display: grid; grid-template-columns: 88px 52px 90px 80px 50px 1fr;
+  padding: 10px 14px; border-bottom: 1px solid var(--border);
+  font-family: var(--mono); font-size: 9px; text-transform: uppercase;
+  letter-spacing: .1em; color: var(--muted); gap: 6px;
+}
+.table-row {
+  display: grid; grid-template-columns: 88px 52px 90px 80px 50px 1fr;
+  padding: 10px 14px; border-bottom: 1px solid #ffffff04;
+  font-size: 12px; align-items: center; gap: 6px;
+  transition: background .15s; cursor: pointer;
+}
+.table-row:hover { background: #ffffff03; }
+.table-row:last-child { border-bottom: none; }
+
+.table-date { font-family: var(--mono); font-size: 10px; color: var(--muted); }
+
+.score-pill {
+  font-family: var(--mono); font-size: 11px; font-weight: 600;
+  padding: 3px 8px; border-radius: 5px; text-align: center;
+}
+.score-off  { background: var(--rd); color: var(--red);    border: 1px solid var(--rb); }
+.score-low  { background: var(--yd); color: var(--yellow); border: 1px solid var(--yb); }
+.score-mid  { background: #0af0ff10; color: var(--blue);   border: 1px solid #0af0ff28; }
+.score-high { background: var(--gd); color: var(--green);  border: 1px solid var(--gb); }
+
+.signal-tag {
+  font-family: var(--mono); font-size: 9px; text-transform: uppercase;
+  padding: 3px 8px; border-radius: 5px; border: 1px solid;
+  text-align: center; white-space: nowrap;
+}
+.signal-tag.on   { background: var(--gd); color: var(--green); border-color: var(--gb); }
+.signal-tag.off  { background: var(--rd); color: var(--red);   border-color: var(--rb); }
+.signal-tag.cau  { background: var(--yd); color: var(--yellow); border-color: var(--yb); }
+
+.regime-tag { font-family: var(--mono); font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+
+.sol-change { font-family: var(--mono); font-size: 11px; font-weight: 600; }
+
+.profit-cell { font-family: var(--mono); font-size: 11px; text-align: right; font-weight: 600; }
+
+/* comparison */
+.compare { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 18px; }
+.compare-card { background: var(--s1); border: 1px solid var(--border); border-radius: 12px; padding: 16px; text-align: center; }
+.compare-icon { font-size: 24px; margin-bottom: 8px; }
+.compare-label { font-family: var(--mono); font-size: 9px; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); margin-bottom: 8px; }
+.compare-val { font-size: 26px; font-weight: 800; }
+.compare-sub { font-family: var(--mono); font-size: 10px; color: var(--muted); margin-top: 4px; }
+
+/* insight */
+.insight { background: var(--s1); border: 1px solid var(--border2); border-radius: 14px; padding: 18px; margin-bottom: 18px; }
+.insight-title { font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: .14em; color: var(--muted); margin-bottom: 14px; }
+.insight-row { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: 8px; margin-bottom: 6px; border: 1px solid transparent; font-size: 13px; line-height: 1.5; }
+.insight-row:last-child { margin-bottom: 0; }
+.insight-row.pos { background: var(--gd); border-color: var(--gb); }
+.insight-row.neg { background: var(--rd); border-color: var(--rb); }
+.insight-row.neu { background: var(--s2); border-color: var(--border); color: var(--muted); }
+.insight-icon { font-size: 14px; flex-shrink: 0; margin-top: 1px; }
+
+/* note */
+.note { background: #bf5fff10; border: 1px solid #bf5fff28; border-radius: 12px; padding: 14px 16px; display: flex; gap: 10px; }
+.note-icon { font-size: 16px; flex-shrink: 0; }
+.note-text { font-family: var(--mono); font-size: 11px; color: var(--muted); line-height: 1.8; }
+.note-text strong { color: var(--purple); }
+
+@media (max-width: 500px) {
+  .kpis { grid-template-columns: 1fr 1fr; }
+  .table-head, .table-row { grid-template-columns: 72px 44px 80px 70px 44px 1fr; font-size: 10px; padding: 8px 10px; gap: 4px; }
+  .compare { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="eyebrow"><div class="live-dot"></div>Sistema Cuantitativo · Backtest real</div>
+<h1>Score <em>System</em><br>May 11–24, 2026</h1>
+<p class="sub">SOL/USDT · $500 · 1x · Pionex · 14 días · precios y noticias reales<br>
+Macro prioridad absoluta · ADX + ATR + Regime detection</p>
+
+<!-- KPIs -->
+<div class="kpis">
+  <div class="kpi">
+    <div class="kpi-label">Score promedio</div>
+    <div class="kpi-val y">31.1</div>
+    <div class="kpi-sub">/ 100 · período difícil</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-label">Días OFF 🔴</div>
+    <div class="kpi-val r">5</div>
+    <div class="kpi-sub">bot pausado correctamente</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-label">Grid profit</div>
+    <div class="kpi-val g">+$3.50</div>
+    <div class="kpi-sub">días activos únicamente</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-label">Pérdidas evitadas</div>
+    <div class="kpi-val g">~$10.75</div>
+    <div class="kpi-sub">días OFF con caídas</div>
+  </div>
+</div>
+
+<!-- Score chart -->
+<div class="chart-card">
+  <div class="chart-title">
+    <span>Score diario (0–100) + zonas de operación</span>
+    <div class="chart-legend">
+      <div class="leg"><div class="leg-dot" style="background:#00ff88"></div>ON</div>
+      <div class="leg"><div class="leg-dot" style="background:#ffd60a"></div>PRECAUCIÓN</div>
+      <div class="leg"><div class="leg-dot" style="background:#ff2d55"></div>OFF</div>
+    </div>
+  </div>
+  <canvas id="scoreChart" height="180"></canvas>
+</div>
+
+<!-- Table -->
+<div class="table-card">
+  <div class="table-head">
+    <span>Fecha</span>
+    <span>Score</span>
+    <span>Señal</span>
+    <span>Régimen</span>
+    <span>SOL</span>
+    <span style="text-align:right">P&L</span>
+  </div>
+  <div id="tableRows"></div>
+</div>
+
+<!-- Comparison -->
+<div class="compare">
+  <div class="compare-card">
+    <div class="compare-icon">🧠</div>
+    <div class="compare-label">Con sistema quant</div>
+    <div class="compare-val g">+$3.50</div>
+    <div class="compare-sub">grid + ~$10.75 evitado</div>
+  </div>
+  <div class="compare-card">
+    <div class="compare-icon">🤖</div>
+    <div class="compare-label">Bot siempre ON</div>
+    <div class="compare-val r">−$15.81</div>
+    <div class="compare-sub">grid $5.44 − pos $21.25</div>
+  </div>
+  <div class="compare-card">
+    <div class="compare-icon">💤</div>
+    <div class="compare-label">Hold puro</div>
+    <div class="compare-val r">−$18.60</div>
+    <div class="compare-sub">$89.20 → $85.93</div>
+  </div>
+</div>
+
+<!-- Insights -->
+<div class="insight">
+  <div class="insight-title">🔬 Insights del sistema cuantitativo</div>
+  <div class="insight-row neg">
+    <div class="insight-icon">📊</div>
+    <div>Score promedio 31.1/100 — el período fue extremadamente difícil macro. CPI 3.8%, FOMC hawkish, Goldman saliendo. El sistema lo detectó correctamente y fue muy conservador.</div>
+  </div>
+  <div class="insight-row pos">
+    <div class="insight-icon">🎯</div>
+    <div>Los 5 días OFF (18–22 mayo) fueron exactamente los días con caídas más fuertes. SOL bajó $3–5 en esos días. El sistema evitó ~$10.75 en pérdidas de posición.</div>
+  </div>
+  <div class="insight-row neu">
+    <div class="insight-icon">⚠️</div>
+    <div>0 días con señal INFINITY GRID en todo el período — correcto. BTC nunca superó resistencias con volumen, Goldman salió de SOL ETFs, contexto no era alcista confirmado.</div>
+  </div>
+  <div class="insight-row pos">
+    <div class="insight-icon">🛡️</div>
+    <div>La penalización por cercanía FOMC/CPI funcionó: score cayó a 8 el lunes 18 (FOMC minutes miércoles) y a 0 el martes 19 (BTC colapso $77k). Bot apagado antes del daño.</div>
+  </div>
+  <div class="insight-row neg">
+    <div class="insight-icon">🔍</div>
+    <div>Ningún día llegó a score >61 para Grid Normal activo puro — el período de CPI alto + Goldman exit + BTC bajo $80k mantuvo el score deprimido casi toda la semana 2.</div>
+  </div>
+</div>
+
+<div class="note">
+  <div class="note-icon">🧮</div>
+  <div class="note-text">
+    <strong>Lo más importante del backtest:</strong> el sistema cuantitativo NO genera más profit en días buenos — genera casi lo mismo. Su valor está en <strong>no operar cuando no debe</strong>. En un período normal (BTC estable, sin macro), el score subiría a 65–75 y el bot correría Grid Normal casi todos los días capturando $1–2 diarios.
+  </div>
+</div>
+
+</div>
+
+<script>
+const data = [
+  { date:"Lun 11", score:56, signal:"cau", regime:"ALCISTA",   sol:+1.8, profit:"+$0.39", profitPos:true, avoided:false },
+  { date:"Mar 12", score:54, signal:"cau", regime:"ALCISTA",   sol:+1.0, profit:"+$0.39", profitPos:true, avoided:false },
+  { date:"Mié 13", score:48, signal:"cau", regime:"LATERAL",   sol:-0.7, profit:"+$0.39", profitPos:true, avoided:false },
+  { date:"Jue 14", score:31, signal:"cau", regime:"LATERAL",   sol:-1.4, profit:"+$0.39", profitPos:true, avoided:false },
+  { date:"Vie 15", score:47, signal:"cau", regime:"LATERAL",   sol:-0.5, profit:"+$0.39", profitPos:true, avoided:false },
+  { date:"Sáb 16", score:37, signal:"cau", regime:"LATERAL",   sol:-0.7, profit:"+$0.39", profitPos:true, avoided:false },
+  { date:"Dom 17", score:31, signal:"cau", regime:"LATERAL",   sol:+0.3, profit:"+$0.39", profitPos:true, avoided:false },
+  { date:"Lun 18", score: 8, signal:"off", regime:"MACRO",     sol:-0.3, profit:"PAUSADO", profitPos:false, avoided:true },
+  { date:"Mar 19", score: 0, signal:"off", regime:"BAJISTA",   sol:-3.1, profit:"−$7.75 ev.", profitPos:true, avoided:true },
+  { date:"Mié 20", score: 0, signal:"off", regime:"MACRO",     sol:+1.1, profit:"PAUSADO", profitPos:false, avoided:true },
+  { date:"Jue 21", score: 6, signal:"off", regime:"MACRO",     sol:-0.6, profit:"PAUSADO", profitPos:false, avoided:true },
+  { date:"Vie 22", score:27, signal:"off", regime:"LATERAL",   sol:-1.2, profit:"−$3.00 ev.", profitPos:true, avoided:true },
+  { date:"Sáb 23", score:45, signal:"cau", regime:"LATERAL",   sol:+1.2, profit:"+$0.39", profitPos:true, avoided:false },
+  { date:"Dom 24", score:45, signal:"cau", regime:"LATERAL",   sol:+1.2, profit:"+$0.39", profitPos:true, avoided:false },
+];
+
+// Table rows
+const tbody = document.getElementById('tableRows');
+data.forEach(d => {
+  const scoreClass = d.score <= 30 ? 'score-off' : d.score <= 60 ? 'score-low' : d.score <= 80 ? 'score-mid' : 'score-high';
+  const solColor = d.sol >= 0 ? 'var(--green)' : 'var(--red)';
+  const profitColor = d.avoided ? 'var(--green)' : d.profitPos ? 'var(--green)' : 'var(--red)';
+  const regimeColor = { ALCISTA:'var(--green)', LATERAL:'var(--blue)', BAJISTA:'var(--red)', MACRO:'var(--yellow)' }[d.regime] || 'var(--muted)';
+
+  tbody.innerHTML += `
+    <div class="table-row">
+      <div class="table-date">${d.date}</div>
+      <div><span class="score-pill ${scoreClass}">${d.score}</span></div>
+      <div><span class="signal-tag ${d.signal}">${d.signal === 'on' ? '🟢 ON' : d.signal === 'off' ? '🔴 OFF' : '🟡 CAUT'}</span></div>
+      <div class="regime-tag" style="color:${regimeColor}">${d.regime}</div>
+      <div class="sol-change" style="color:${solColor}">${d.sol >= 0 ? '+' : ''}${d.sol}%</div>
+      <div class="profit-cell" style="color:${profitColor}">${d.profit}</div>
+    </div>`;
+});
+
+// Score chart
+const canvas = document.getElementById('scoreChart');
+const ctx = canvas.getContext('2d');
+
+function draw() {
+  const W = canvas.offsetWidth;
+  const H = 180;
+  canvas.width = W * devicePixelRatio;
+  canvas.height = H * devicePixelRatio;
+  ctx.scale(devicePixelRatio, devicePixelRatio);
+
+  const pL=42, pR=14, pT=14, pB=28;
+  const cW=W-pL-pR, cH=H-pT-pB;
+  const n = data.length;
+  const toX = i => pL + (i/(n-1))*cW;
+  const toY = v => pT + cH - (v/100)*cH;
+
+  // Zone fills
+  // OFF zone 0-30
+  const offGrad = ctx.createLinearGradient(0,toY(30),0,toY(0));
+  offGrad.addColorStop(0,'#ff2d5508'); offGrad.addColorStop(1,'#ff2d5518');
+  ctx.fillStyle = offGrad;
+  ctx.fillRect(pL, toY(30), cW, toY(0)-toY(30));
+
+  // PRECAUTION zone 31-60
+  const cauGrad = ctx.createLinearGradient(0,toY(60),0,toY(31));
+  cauGrad.addColorStop(0,'#ffd60a08'); cauGrad.addColorStop(1,'#ffd60a04');
+  ctx.fillStyle = cauGrad;
+  ctx.fillRect(pL, toY(60), cW, toY(31)-toY(60));
+
+  // ON zone 61-80
+  ctx.fillStyle = '#0af0ff06';
+  ctx.fillRect(pL, toY(80), cW, toY(61)-toY(80));
+
+  // INFINITY zone 81-100
+  ctx.fillStyle = '#00ff8806';
+  ctx.fillRect(pL, toY(100), cW, toY(81)-toY(100));
+
+  // Threshold lines
+  [[30,'#ff2d5540'],[60,'#ffd60a40'],[80,'#0af0ff30']].forEach(([v,col]) => {
+    ctx.beginPath(); ctx.strokeStyle=col; ctx.lineWidth=1; ctx.setLineDash([3,4]);
+    ctx.moveTo(pL,toY(v)); ctx.lineTo(W-pR,toY(v)); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle=col; ctx.font='8px IBM Plex Mono,monospace';
+    ctx.fillText(v, 2, toY(v)+3);
+  });
+
+  // Y axis labels
+  ctx.fillStyle = '#3a4560'; ctx.font = '8px IBM Plex Mono,monospace';
+  ['OFF','CAUT','ON','∞'].forEach((l,i) => {
+    const y = [toY(15),toY(45),toY(70),toY(90)][i];
+    ctx.fillText(l, 2, y+3);
+  });
+
+  // Area under score line
+  ctx.beginPath();
+  data.forEach((d,i) => { const x=toX(i),y=toY(d.score); i===0?ctx.moveTo(x,y):ctx.lineTo(x,y); });
+  ctx.lineTo(toX(n-1), H-pB); ctx.lineTo(pL, H-pB); ctx.closePath();
+  const areaGrad = ctx.createLinearGradient(0,0,0,H);
+  areaGrad.addColorStop(0,'#0af0ff18'); areaGrad.addColorStop(1,'#0af0ff02');
+  ctx.fillStyle=areaGrad; ctx.fill();
+
+  // Score line
+  ctx.beginPath(); ctx.strokeStyle='#0af0ff'; ctx.lineWidth=2; ctx.lineJoin='round';
+  data.forEach((d,i) => { const x=toX(i),y=toY(d.score); i===0?ctx.moveTo(x,y):ctx.lineTo(x,y); });
+  ctx.stroke();
+
+  // Colored dots per signal
+  data.forEach((d,i) => {
+    const x=toX(i), y=toY(d.score);
+    const col = d.signal==='on' ? '#00ff88' : d.signal==='off' ? '#ff2d55' : '#ffd60a';
+    ctx.beginPath(); ctx.arc(x,y,5,0,Math.PI*2); ctx.fillStyle=col+'40'; ctx.fill();
+    ctx.beginPath(); ctx.arc(x,y,3,0,Math.PI*2); ctx.fillStyle=col; ctx.fill();
+    // Score label above dot
+    ctx.fillStyle = col; ctx.font='8px IBM Plex Mono,monospace'; ctx.textAlign='center';
+    ctx.fillText(d.score, x, y-8);
+    // Date label below
+    ctx.fillStyle='#3a4560';
+    ctx.fillText(d.date.split(' ')[1], x, H-pB+14);
+    ctx.textAlign='left';
+  });
+}
+
+draw();
+window.addEventListener('resize', draw);
+</script>
+</body>
+</html>

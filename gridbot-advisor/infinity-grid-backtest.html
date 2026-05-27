@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Infinity Grid Backtest — SOL</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Cabinet+Grotesk:wght@400;500;700;800&display=swap');
+
+  :root {
+    --bg: #07080b;
+    --s1: #0e1016;
+    --s2: #141720;
+    --border: #1e2230;
+    --green: #2ecc8e;
+    --green-d: #2ecc8e18;
+    --red: #e05c6a;
+    --red-d: #e05c6a18;
+    --yellow: #f5b731;
+    --yellow-d: #f5b73115;
+    --blue: #5ba3f5;
+    --blue-d: #5ba3f518;
+    --purple: #9d7ef5;
+    --text: #dde2ee;
+    --muted: #4a5268;
+    --mono: 'DM Mono', monospace;
+    --sans: 'Cabinet Grotesk', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    padding: 24px 16px 60px;
+  }
+
+  .wrap { max-width: 740px; margin: 0 auto; }
+
+  /* header */
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--green);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    display: flex; align-items: center; gap: 8px;
+    margin-bottom: 10px;
+  }
+  .dot-live { width:7px; height:7px; border-radius:50%; background:var(--green); animation: blink 2s infinite; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+  h1 { font-size: clamp(26px,7vw,42px); font-weight:800; line-height:1.05; letter-spacing:-0.03em; margin-bottom:6px; }
+  h1 em { font-style:normal; color:var(--green); }
+  .sub { font-family:var(--mono); font-size:12px; color:var(--muted); margin-bottom:32px; }
+
+  /* verdict banner */
+  .verdict {
+    border-radius: 14px;
+    padding: 20px 22px;
+    margin-bottom: 28px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    border: 1px solid;
+  }
+  .verdict.neutral { background: var(--yellow-d); border-color: #f5b73130; }
+  .verdict-icon { font-size: 32px; flex-shrink:0; }
+  .verdict-label { font-family:var(--mono); font-size:10px; text-transform:uppercase; letter-spacing:.14em; color:var(--muted); margin-bottom:4px; }
+  .verdict-text { font-size:15px; font-weight:700; line-height:1.4; }
+  .verdict.neutral .verdict-text { color: var(--yellow); }
+
+  /* tabs */
+  .tabs { display:flex; gap:8px; margin-bottom:20px; }
+  .tab {
+    padding: 8px 18px;
+    border-radius: 8px;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: var(--s1);
+    color: var(--muted);
+    transition: all .2s;
+  }
+  .tab.active { background: var(--green-d); border-color: #2ecc8e40; color: var(--green); }
+
+  /* section */
+  .section { margin-bottom: 22px; }
+  .section-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: .14em;
+    color: var(--muted);
+    margin-bottom: 12px;
+  }
+
+  /* metrics grid */
+  .metrics { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .metric {
+    background: var(--s1);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+  }
+  .metric-label { font-family:var(--mono); font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:.1em; margin-bottom:8px; }
+  .metric-val { font-size: 28px; font-weight:800; line-height:1; }
+  .metric-sub { font-family:var(--mono); font-size:11px; color:var(--muted); margin-top:5px; }
+  .green { color: var(--green); }
+  .red { color: var(--red); }
+  .yellow { color: var(--yellow); }
+  .blue { color: var(--blue); }
+  .purple { color: var(--purple); }
+
+  /* compare table */
+  .compare {
+    background: var(--s1);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+    margin-bottom: 22px;
+  }
+  .compare-header {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr 1fr;
+    padding: 12px 18px;
+    border-bottom: 1px solid var(--border);
+    font-family: var(--mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: .1em;
+    color: var(--muted);
+  }
+  .compare-row {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr 1fr;
+    padding: 13px 18px;
+    border-bottom: 1px solid #ffffff05;
+    font-size: 13px;
+    align-items: center;
+  }
+  .compare-row:last-child { border-bottom: none; }
+  .compare-row:hover { background: #ffffff03; }
+  .compare-key { color: var(--muted); font-family: var(--mono); font-size:11px; }
+  .compare-val { font-weight: 700; font-family: var(--mono); }
+  .winner { position:relative; }
+  .winner::after {
+    content: '✓';
+    font-size: 9px;
+    background: var(--green-d);
+    color: var(--green);
+    padding: 2px 5px;
+    border-radius: 4px;
+    margin-left: 6px;
+    border: 1px solid #2ecc8e30;
+  }
+
+  /* scenarios */
+  .scenarios { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-bottom:22px; }
+  .scenario {
+    border-radius:12px;
+    padding:16px;
+    border:1px solid;
+    text-align:center;
+  }
+  .scenario.bear { background:var(--red-d); border-color:#e05c6a30; }
+  .scenario.flat { background:var(--yellow-d); border-color:#f5b73130; }
+  .scenario.bull { background:var(--green-d); border-color:#2ecc8e30; }
+  .scenario-icon { font-size:22px; margin-bottom:8px; }
+  .scenario-title { font-family:var(--mono); font-size:9px; text-transform:uppercase; letter-spacing:.12em; color:var(--muted); margin-bottom:6px; }
+  .scenario-range { font-size:12px; font-weight:700; margin-bottom:10px; }
+  .scenario.bear .scenario-range { color:var(--red); }
+  .scenario.flat .scenario-range { color:var(--yellow); }
+  .scenario.bull .scenario-range { color:var(--green); }
+  .scenario-pnl { font-size:22px; font-weight:800; line-height:1; }
+  .scenario.bear .scenario-pnl { color:var(--red); }
+  .scenario.flat .scenario-pnl { color:var(--yellow); }
+  .scenario.bull .scenario-pnl { color:var(--green); }
+  .scenario-sub { font-family:var(--mono); font-size:10px; color:var(--muted); margin-top:5px; }
+
+  /* canvas */
+  .chart-box {
+    background: var(--s1);
+    border: 1px solid var(--border);
+    border-radius:14px;
+    padding:18px;
+    margin-bottom:22px;
+  }
+  .chart-box-title { font-family:var(--mono); font-size:10px; text-transform:uppercase; letter-spacing:.12em; color:var(--muted); margin-bottom:14px; }
+  canvas { width:100%; display:block; }
+
+  /* how it works */
+  .how {
+    background: var(--s1);
+    border:1px solid var(--border);
+    border-radius:14px;
+    padding:18px 20px;
+    margin-bottom:22px;
+  }
+  .how-title { font-family:var(--mono); font-size:10px; text-transform:uppercase; letter-spacing:.12em; color:var(--muted); margin-bottom:14px; }
+  .how-step { display:flex; gap:12px; margin-bottom:12px; align-items:flex-start; }
+  .how-step:last-child { margin-bottom:0; }
+  .how-num {
+    width:22px; height:22px; border-radius:6px; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center;
+    font-family:var(--mono); font-size:10px; font-weight:700;
+    background:var(--green-d); color:var(--green); border:1px solid #2ecc8e30;
+    margin-top:1px;
+  }
+  .how-text { font-size:13px; line-height:1.5; color:var(--text); }
+  .how-text span { color:var(--green); font-weight:700; }
+
+  /* note */
+  .note {
+    background: #5ba3f510;
+    border:1px solid #5ba3f525;
+    border-radius:12px;
+    padding:14px 18px;
+    display:flex; gap:10px; align-items:flex-start;
+  }
+  .note-icon { font-size:16px; flex-shrink:0; margin-top:2px; }
+  .note-text { font-family:var(--mono); font-size:11px; color:var(--muted); line-height:1.7; }
+  .note-text strong { color:var(--blue); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="eyebrow"><div class="dot-live"></div>Backtest simulado · SOL/USDT · May 18–25, 2026</div>
+  <h1>Infinity <em>Grid</em><br>vs Grid Normal</h1>
+  <p class="sub">$500 capital · 1x · Pionex · precios reales de la semana</p>
+
+  <!-- Verdict -->
+  <div class="verdict neutral">
+    <div class="verdict-icon">⚖️</div>
+    <div>
+      <div class="verdict-label">Veredicto esta semana</div>
+      <div class="verdict-text">Semana lateral-bajista: Grid Normal ganó más ($8.34 vs -$0.39). Infinity Grid brilla en tendencias alcistas — esta semana no fue su escenario ideal.</div>
+    </div>
+  </div>
+
+  <!-- Metrics Infinity -->
+  <div class="section">
+    <div class="section-label">Infinity Grid — resultados semana real</div>
+    <div class="metrics">
+      <div class="metric">
+        <div class="metric-label">Grid profit neto</div>
+        <div class="metric-val green">+$3.25</div>
+        <div class="metric-sub">10 ciclos × $0.35 − fees</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">P&L posición SOL</div>
+        <div class="metric-val red">−$3.64</div>
+        <div class="metric-sub">2.867 SOL × (−$1.27)</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">P&L total</div>
+        <div class="metric-val yellow">−$0.39</div>
+        <div class="metric-sub">casi break-even</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">ROI semana</div>
+        <div class="metric-val yellow">−0.08%</div>
+        <div class="metric-sub">vs −2.6% hacer hold puro</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Comparison table -->
+  <div class="section">
+    <div class="section-label">Comparativa directa — misma semana, mismos $500</div>
+    <div class="compare">
+      <div class="compare-header">
+        <span>Métrica</span>
+        <span>Grid Normal</span>
+        <span>Infinity Grid</span>
+      </div>
+      <div class="compare-row">
+        <div class="compare-key">Grid profit neto</div>
+        <div class="compare-val green winner">+$8.34</div>
+        <div class="compare-val green">+$3.25</div>
+      </div>
+      <div class="compare-row">
+        <div class="compare-key">P&L posición</div>
+        <div class="compare-val green winner">$0 (sin posición)</div>
+        <div class="compare-val red">−$3.64</div>
+      </div>
+      <div class="compare-row">
+        <div class="compare-key">Total P&L semana</div>
+        <div class="compare-val green winner">+$8.34</div>
+        <div class="compare-val yellow">−$0.39</div>
+      </div>
+      <div class="compare-row">
+        <div class="compare-key">ROI semana</div>
+        <div class="compare-val green winner">+1.67%</div>
+        <div class="compare-val yellow">−0.08%</div>
+      </div>
+      <div class="compare-row">
+        <div class="compare-key">Si SOL sube a $100</div>
+        <div class="compare-val yellow">+$8–12 (rango limitado)</div>
+        <div class="compare-val green winner">+$41.25</div>
+      </div>
+      <div class="compare-row">
+        <div class="compare-key">Si SOL sube a $150</div>
+        <div class="compare-val red">Bot se detiene en $100</div>
+        <div class="compare-val green winner">Sigue capturando</div>
+      </div>
+      <div class="compare-row">
+        <div class="compare-key">Si SOL cae a $75</div>
+        <div class="compare-val green winner">−$0 (sin posición)</div>
+        <div class="compare-val red">−$32.70</div>
+      </div>
+      <div class="compare-row">
+        <div class="compare-key">Set & forget</div>
+        <div class="compare-val yellow">Parcial (rango expira)</div>
+        <div class="compare-val green winner">✓ Indefinido</div>
+      </div>
+      <div class="compare-row">
+        <div class="compare-key">Fees pagados</div>
+        <div class="compare-val yellow">−$0.84</div>
+        <div class="compare-val green winner">−$0.25</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scenarios -->
+  <div class="section">
+    <div class="section-label">Infinity Grid — 3 escenarios proyectados (1 semana)</div>
+    <div class="scenarios">
+      <div class="scenario bear">
+        <div class="scenario-icon">🐻</div>
+        <div class="scenario-title">Bajista</div>
+        <div class="scenario-range">$87 → $75</div>
+        <div class="scenario-pnl">−$32.70</div>
+        <div class="scenario-sub">grid: +$2.45<br>posición: −$35.15</div>
+      </div>
+      <div class="scenario flat">
+        <div class="scenario-icon">🦀</div>
+        <div class="scenario-title">Lateral</div>
+        <div class="scenario-range">$83 – $88</div>
+        <div class="scenario-pnl">−$0.39</div>
+        <div class="scenario-sub">grid: +$3.25<br>posición: −$3.64</div>
+      </div>
+      <div class="scenario bull">
+        <div class="scenario-icon">🚀</div>
+        <div class="scenario-title">Alcista</div>
+        <div class="scenario-range">$87 → $100</div>
+        <div class="scenario-pnl">+$41.25</div>
+        <div class="scenario-sub">grid: +$4.90<br>posición: +$36.70</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Chart -->
+  <div class="chart-box">
+    <div class="chart-box-title">Precio SOL + niveles infinity grid (sin límite superior)</div>
+    <canvas id="c" height="170"></canvas>
+  </div>
+
+  <!-- How it works -->
+  <div class="how">
+    <div class="how-title">Cómo funciona el Infinity Grid</div>
+    <div class="how-step">
+      <div class="how-num">1</div>
+      <div class="how-text">Al iniciar, Pionex divide el capital: <span>~50% compra SOL</span> al precio de entrada, el otro 50% queda en USDT.</div>
+    </div>
+    <div class="how-step">
+      <div class="how-num">2</div>
+      <div class="how-text">Coloca <span>órdenes de venta</span> cada 1.5% arriba del precio actual — sin techo. Si SOL llega a $200, el bot sigue vendiendo fracciones y capturando profit.</div>
+    </div>
+    <div class="how-step">
+      <div class="how-num">3</div>
+      <div class="how-text">Cada vez que el precio baja al nivel anterior, <span>recompra más barato</span> — ciclo completo = profit de ~1.4% neto de fees.</div>
+    </div>
+    <div class="how-step">
+      <div class="how-num">4</div>
+      <div class="how-text">El riesgo real es <span>la posición en SOL que tienes desde el inicio</span>. Si el precio cae, esa posición pierde valor — el grid profit amortigua pero no elimina esa pérdida.</div>
+    </div>
+  </div>
+
+  <!-- Note -->
+  <div class="note">
+    <div class="note-icon">💡</div>
+    <div class="note-text">
+      <strong>Conclusión estratégica:</strong> usa Grid Normal en mercados laterales o bajistas para maximizar profit puro. Cambia a Infinity Grid cuando el contexto macro sea claramente alcista (Fed dovish, BTC rompiendo resistencias, flujos ETF positivos). La app de noticias que vamos a hacer te ayudará a decidir cuál usar cada semana.
+    </div>
+  </div>
+
+</div>
+
+<script>
+const prices = [87.20, 87.29, 85.42, 84.90, 83.89, 84.93, 85.93];
+const days = ['Dom 18','Lun 19','Mar 20','Mié 21','Jue 22','Vie 23','Sáb 24'];
+const gridLevels = [88.51, 89.84, 91.18, 92.55, 93.94];
+
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+
+function draw() {
+  const W = canvas.offsetWidth;
+  const H = 170;
+  canvas.width = W * devicePixelRatio;
+  canvas.height = H * devicePixelRatio;
+  ctx.scale(devicePixelRatio, devicePixelRatio);
+
+  const pL=48, pR=20, pT=14, pB=28;
+  const cW = W-pL-pR, cH = H-pT-pB;
+  const allPrices = [...prices, ...gridLevels];
+  const minP = 80, maxP = 97;
+
+  const toY = p => pT + cH - ((p-minP)/(maxP-minP))*cH;
+  const toX = i => pL + (i/(prices.length-1))*cW;
+
+  // bg
+  ctx.fillStyle = '#0e1016';
+  ctx.fillRect(0,0,W,H);
+
+  // grid lines horizontal
+  [80,83,86,89,92,95].forEach(g => {
+    const y = toY(g);
+    ctx.beginPath();
+    ctx.strokeStyle = '#1e2230';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([2,5]);
+    ctx.moveTo(pL,y); ctx.lineTo(W-pR,y);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#3a4258';
+    ctx.font = `9px DM Mono, monospace`;
+    ctx.fillText('$'+g, 2, y+3);
+  });
+
+  // infinity grid levels (dashed green, extending right)
+  gridLevels.forEach(g => {
+    const y = toY(g);
+    if (y < pT || y > H-pB) return;
+    ctx.beginPath();
+    ctx.strokeStyle = '#2ecc8e40';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([4,3]);
+    ctx.moveTo(pL,y); ctx.lineTo(W-pR,y);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#2ecc8e70';
+    ctx.font = '8px DM Mono, monospace';
+    ctx.fillText('grid', W-pR-26, y-2);
+  });
+
+  // "sin techo" arrow
+  ctx.fillStyle = '#2ecc8e60';
+  ctx.font = '9px DM Mono, monospace';
+  ctx.fillText('∞ sin techo', W-pR-66, pT+10);
+
+  // area fill
+  ctx.beginPath();
+  prices.forEach((p,i) => {
+    const x=toX(i), y=toY(p);
+    i===0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
+  });
+  ctx.lineTo(toX(prices.length-1), H-pB);
+  ctx.lineTo(pL, H-pB);
+  ctx.closePath();
+  const ag = ctx.createLinearGradient(0,0,0,H);
+  ag.addColorStop(0,'#2ecc8e20');
+  ag.addColorStop(1,'#2ecc8e03');
+  ctx.fillStyle = ag;
+  ctx.fill();
+
+  // price line
+  ctx.beginPath();
+  ctx.strokeStyle = '#2ecc8e';
+  ctx.lineWidth = 2.5;
+  ctx.lineJoin = 'round';
+  prices.forEach((p,i) => {
+    const x=toX(i), y=toY(p);
+    i===0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
+  });
+  ctx.stroke();
+
+  // entry line
+  const entryY = toY(87.20);
+  ctx.beginPath();
+  ctx.strokeStyle = '#9d7ef560';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([3,4]);
+  ctx.moveTo(pL,entryY); ctx.lineTo(W-pR,entryY);
+  ctx.stroke(); ctx.setLineDash([]);
+  ctx.fillStyle = '#9d7ef590';
+  ctx.font = '8px DM Mono, monospace';
+  ctx.fillText('entrada $87.20', pL+4, entryY-3);
+
+  // dots + labels
+  prices.forEach((p,i) => {
+    const x=toX(i), y=toY(p);
+    ctx.beginPath();
+    ctx.arc(x,y,4,0,Math.PI*2);
+    ctx.fillStyle = '#2ecc8e';
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(x,y,2,0,Math.PI*2);
+    ctx.fillStyle = '#07080b';
+    ctx.fill();
+    // day labels
+    ctx.fillStyle = '#3a4258';
+    ctx.font = '8px DM Mono, monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(days[i].split(' ')[0], x, H-pB+14);
+    ctx.textAlign = 'left';
+  });
+}
+
+draw();
+window.addEventListener('resize', draw);
+</script>
+</body>
+</html>

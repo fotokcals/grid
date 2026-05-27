@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Proyección 30 días</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Barlow:wght@400;600;700;800;900&display=swap');
+:root {
+  --bg:#05060a; --s1:#0b0d13; --s2:#10131c; --border:#1a1f30; --border2:#222840;
+  --green:#00ff88; --gd:#00ff8812; --gb:#00ff8830;
+  --red:#ff2d55; --rd:#ff2d5512; --rb:#ff2d5530;
+  --yellow:#ffd60a; --yd:#ffd60a12; --yb:#ffd60a30;
+  --blue:#0af0ff; --bd:#0af0ff12; --bb:#0af0ff30;
+  --purple:#bf5fff; --pd:#bf5fff12;
+  --text:#c8d8f0; --muted:#3a4560;
+  --mono:'IBM Plex Mono',monospace; --sans:'Barlow',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);padding:20px 14px 72px;}
+.wrap{max-width:740px;margin:0 auto;}
+
+.eyebrow{font-family:var(--mono);font-size:10px;color:var(--blue);letter-spacing:.18em;text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:8px;}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--blue);animation:blink 2s infinite;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+h1{font-size:clamp(22px,6vw,38px);font-weight:900;letter-spacing:-.03em;margin-bottom:6px;line-height:1.05;}
+h1 em{font-style:normal;color:var(--green);}
+.sub{font-family:var(--mono);font-size:11px;color:var(--muted);margin-bottom:26px;}
+
+/* hero profit */
+.hero{background:var(--s1);border:1px solid var(--border);border-radius:16px;padding:22px;margin-bottom:16px;position:relative;overflow:hidden;}
+.hero::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--green),transparent);}
+.hero-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;}
+.hero-item{text-align:center;}
+.hero-label{font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);margin-bottom:8px;}
+.hero-val{font-size:32px;font-weight:900;line-height:1;}
+.hero-sub{font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:5px;}
+.g{color:var(--green);} .r{color:var(--red);} .y{color:var(--yellow);} .b{color:var(--blue);}
+
+/* scenarios */
+.scenarios{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px;}
+.sc{border-radius:12px;padding:14px;border:1px solid;text-align:center;}
+.sc.bear{background:var(--rd);border-color:var(--rb);}
+.sc.base{background:var(--bd);border-color:var(--bb);}
+.sc.bull{background:var(--gd);border-color:var(--gb);}
+.sc-label{font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:6px;}
+.sc-val{font-size:24px;font-weight:800;}
+.sc.bear .sc-val{color:var(--red);}
+.sc.base .sc-val{color:var(--blue);}
+.sc.bull .sc-val{color:var(--green);}
+.sc-sub{font-family:var(--mono);font-size:9px;color:var(--muted);margin-top:4px;}
+
+/* chart */
+.chart-card{background:var(--s1);border:1px solid var(--border);border-radius:14px;padding:18px;margin-bottom:16px;}
+.chart-title{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.14em;color:var(--muted);margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;}
+.legend{display:flex;gap:12px;}
+.leg{display:flex;align-items:center;gap:4px;font-size:10px;color:var(--muted);}
+.leg-dot{width:8px;height:8px;border-radius:2px;}
+canvas{width:100%;display:block;}
+
+/* weekly bars */
+.weeks{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px;}
+.week-card{background:var(--s1);border:1px solid var(--border);border-radius:12px;padding:14px;text-align:center;}
+.week-label{font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:8px;}
+.week-bar-outer{height:60px;background:var(--s2);border-radius:4px;margin-bottom:8px;display:flex;align-items:flex-end;overflow:hidden;}
+.week-bar{width:100%;border-radius:4px 4px 0 0;transition:height 1.2s ease;}
+.week-val{font-family:var(--mono);font-size:14px;font-weight:700;color:var(--green);}
+.week-days{font-family:var(--mono);font-size:9px;color:var(--muted);margin-top:3px;}
+
+/* calendar table */
+.cal-card{background:var(--s1);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:16px;}
+.cal-head{display:grid;grid-template-columns:90px 1fr 70px 70px;padding:10px 14px;border-bottom:1px solid var(--border2);font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);gap:6px;}
+.cal-row{display:grid;grid-template-columns:90px 1fr 70px 70px;padding:10px 14px;border-bottom:1px solid #ffffff04;font-size:12px;align-items:center;gap:6px;transition:background .15s;}
+.cal-row:last-child{border-bottom:none;}
+.cal-row:hover{background:#ffffff03;}
+.cal-row.event-high{border-left:2px solid var(--red);background:var(--rd);}
+.cal-row.event-med{border-left:2px solid var(--yellow);background:var(--yd);}
+.cal-row.event-low{border-left:2px solid var(--blue);}
+.cal-date{font-family:var(--mono);font-size:10px;color:var(--muted);}
+.cal-event{font-size:12px;font-weight:600;}
+.sig-tag{font-family:var(--mono);font-size:9px;text-transform:uppercase;padding:2px 7px;border-radius:4px;border:1px solid;white-space:nowrap;text-align:center;}
+.sig-tag.on{background:var(--gd);color:var(--green);border-color:var(--gb);}
+.sig-tag.off{background:var(--rd);color:var(--red);border-color:var(--rb);}
+.sig-tag.cau{background:var(--yd);color:var(--yellow);border-color:var(--yb);}
+.profit-col{font-family:var(--mono);font-size:11px;font-weight:700;text-align:right;}
+
+/* key events */
+.events{background:var(--s1);border:1px solid var(--border);border-radius:14px;padding:18px;margin-bottom:16px;}
+.events-title{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.14em;color:var(--muted);margin-bottom:14px;}
+.ev-row{display:flex;gap:12px;align-items:flex-start;padding:10px 12px;border-radius:8px;margin-bottom:6px;border:1px solid transparent;font-size:13px;line-height:1.45;}
+.ev-row:last-child{margin-bottom:0;}
+.ev-row.high{background:var(--rd);border-color:var(--rb);}
+.ev-row.med{background:var(--yd);border-color:var(--yb);}
+.ev-row.low{background:var(--gd);border-color:var(--gb);}
+.ev-icon{font-size:16px;flex-shrink:0;margin-top:1px;}
+.ev-text{flex:1;}
+.ev-date{font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:3px;}
+
+/* note */
+.note{background:var(--pd);border:1px solid #bf5fff28;border-radius:12px;padding:14px 16px;display:flex;gap:10px;}
+.note-icon{font-size:16px;flex-shrink:0;}
+.note-text{font-family:var(--mono);font-size:11px;color:var(--muted);line-height:1.8;}
+.note-text strong{color:var(--purple);}
+
+@media(max-width:480px){
+  .hero-grid{grid-template-columns:1fr 1fr;}
+  .scenarios{grid-template-columns:1fr;}
+  .weeks{grid-template-columns:1fr 1fr;}
+  .cal-head,.cal-row{grid-template-columns:72px 1fr 58px 58px;padding:8px 10px;}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="eyebrow"><div class="dot"></div>Proyección cuantitativa · 30 días reales</div>
+<h1>May 25 — Jun 24<br><em>+$9.06</em> proyectado</h1>
+<p class="sub">$500 · Grid Normal · 1x · Sistema cuantitativo + macro calendar<br>ATR(14) SOL: 3.84% · 5 días OFF · 9 días precaución · 17 días activo</p>
+
+<!-- Hero -->
+<div class="hero">
+  <div class="hero-grid">
+    <div class="hero-item">
+      <div class="hero-label">Profit base</div>
+      <div class="hero-val g">+$9.06</div>
+      <div class="hero-sub">+1.81% sobre $500</div>
+    </div>
+    <div class="hero-item">
+      <div class="hero-label">ROI anualizado</div>
+      <div class="hero-val b">21.7%</div>
+      <div class="hero-sub">proyectado × 12</div>
+    </div>
+    <div class="hero-item">
+      <div class="hero-label">Días activo</div>
+      <div class="hero-val y">26/30</div>
+      <div class="hero-sub">5 días pausado (macro)</div>
+    </div>
+  </div>
+</div>
+
+<!-- Scenarios -->
+<div class="scenarios">
+  <div class="sc bear">
+    <div class="sc-label">🐻 Conservador</div>
+    <div class="sc-val">+$6.34</div>
+    <div class="sc-sub">ATR −30% · mercado quieto</div>
+  </div>
+  <div class="sc base">
+    <div class="sc-label">📊 Base</div>
+    <div class="sc-val">+$9.06</div>
+    <div class="sc-sub">ATR actual · 3.84%</div>
+  </div>
+  <div class="sc bull">
+    <div class="sc-label">🚀 Optimista</div>
+    <div class="sc-val">+$11.78</div>
+    <div class="sc-sub">ATR +30% · más movimiento</div>
+  </div>
+</div>
+
+<!-- Cumulative profit chart -->
+<div class="chart-card">
+  <div class="chart-title">
+    <span>Profit acumulado proyectado</span>
+    <div class="legend">
+      <div class="leg"><div class="leg-dot" style="background:var(--green)"></div>ON</div>
+      <div class="leg"><div class="leg-dot" style="background:var(--yellow)"></div>CAUT</div>
+      <div class="leg"><div class="leg-dot" style="background:var(--red)"></div>OFF</div>
+    </div>
+  </div>
+  <canvas id="cumChart" height="170"></canvas>
+</div>
+
+<!-- Weekly breakdown -->
+<div class="weeks">
+  <div class="week-card">
+    <div class="week-label">Sem 1 · May 25–31</div>
+    <div class="week-bar-outer"><div class="week-bar" id="wb1" style="height:0%;background:var(--green)"></div></div>
+    <div class="week-val">+$2.49</div>
+    <div class="week-days">7 días · 5 ON · 2 CAUT</div>
+  </div>
+  <div class="week-card">
+    <div class="week-label">Sem 2 · Jun 1–7</div>
+    <div class="week-bar-outer"><div class="week-bar" id="wb2" style="height:0%;background:var(--green)"></div></div>
+    <div class="week-val">+$2.22</div>
+    <div class="week-days">7 días · 4 ON · 2 CAUT · 1 OFF</div>
+  </div>
+  <div class="week-card">
+    <div class="week-label">Sem 3 · Jun 8–14</div>
+    <div class="week-bar-outer"><div class="week-bar" id="wb3" style="height:0%;background:var(--yellow)"></div></div>
+    <div class="week-val">+$1.87</div>
+    <div class="week-days">7 días · 3 ON · 3 CAUT · 1 OFF</div>
+  </div>
+  <div class="week-card">
+    <div class="week-label">Sem 4 · Jun 15–21</div>
+    <div class="week-bar-outer"><div class="week-bar" id="wb4" style="height:0%;background:var(--red)"></div></div>
+    <div class="week-val">+$1.32</div>
+    <div class="week-days">7 días · 2 ON · 2 CAUT · 3 OFF</div>
+  </div>
+</div>
+
+<!-- Key events -->
+<div class="events">
+  <div class="events-title">🚨 Eventos que cambian la señal — próximos 30 días</div>
+  <div class="ev-row low">
+    <div class="ev-icon">📊</div>
+    <div class="ev-text">
+      <strong>GDP Revision Q1</strong> — Impacto bajo-medio. Precaución el día.
+      <div class="ev-date">Jue 28 May · 7:30 AM CDMX</div>
+    </div>
+  </div>
+  <div class="ev-row med">
+    <div class="ev-icon">📈</div>
+    <div class="ev-text">
+      <strong>PCE Inflación Abril</strong> — Si sale alto, penaliza score. Apagar noche anterior.
+      <div class="ev-date">Vie 29 May · 7:30 AM CDMX</div>
+    </div>
+  </div>
+  <div class="ev-row high">
+    <div class="ev-icon">💼</div>
+    <div class="ev-text">
+      <strong>NFP Nonfarm Payrolls</strong> — ALTO IMPACTO. Apagar la noche del jueves 4.
+      <div class="ev-date">Vie 5 Jun · 7:30 AM CDMX · 🔴 APAGAR Jun 4 noche</div>
+    </div>
+  </div>
+  <div class="ev-row high">
+    <div class="ev-icon">🏦</div>
+    <div class="ev-text">
+      <strong>CPI Mayo dato</strong> — ALTO IMPACTO. Con CPI en 3.8% el anterior, este es el más importante del mes.
+      <div class="ev-date">Mié 10 Jun · 7:30 AM CDMX · 🔴 APAGAR Jun 9 noche</div>
+    </div>
+  </div>
+  <div class="ev-row high">
+    <div class="ev-icon">🏛️</div>
+    <div class="ev-text">
+      <strong>FOMC Decisión + SEP + Dot Plot</strong> — EL evento más importante del mes. 4 días de pausa: Jun 15 (precaución), 16–18 (OFF).
+      <div class="ev-date">Mar–Mié Jun 16–17 · 1:00 PM CDMX · 🔴 APAGAR Jun 15 noche</div>
+    </div>
+  </div>
+</div>
+
+<!-- Calendar (abbreviated) -->
+<div class="cal-card">
+  <div class="cal-head"><span>Fecha</span><span>Evento</span><span>Señal</span><span style="text-align:right">Profit</span></div>
+  <div id="calBody"></div>
+</div>
+
+<div class="note">
+  <div class="note-icon">🧮</div>
+  <div class="note-text">
+    <strong>Nota importante:</strong> esta proyección asume que el mercado se mantiene lateral (~$83–$90) y que no hay eventos inesperados. Si BTC rompe $90k con volumen, el sistema subiría a Infinity Grid y el profit sería mayor. Si BTC cae de $75k, el sistema apaga el bot y el profit sería menor pero <strong>el capital estaría protegido.</strong>
+  </div>
+</div>
+
+</div>
+
+<script>
+const calData = [
+  {date:"Lun 25 May",event:"Ventana limpia",sig:"on",profit:"+$0.39",imp:0},
+  {date:"Mar 26 May",event:"Ventana limpia",sig:"on",profit:"+$0.39",imp:0},
+  {date:"Mié 27 May",event:"Ventana limpia",sig:"on",profit:"+$0.39",imp:0},
+  {date:"Jue 28 May",event:"GDP Revision",sig:"cau",profit:"+$0.27",imp:1},
+  {date:"Vie 29 May",event:"PCE Abril",sig:"cau",profit:"+$0.27",imp:2},
+  {date:"Sáb 30 May",event:"—",sig:"on",profit:"+$0.39",imp:0},
+  {date:"Dom 31 May",event:"—",sig:"on",profit:"+$0.39",imp:0},
+  {date:"Lun 01 Jun",event:"Ventana limpia",sig:"on",profit:"+$0.39",imp:0},
+  {date:"Mar 02 Jun",event:"Ventana limpia",sig:"on",profit:"+$0.39",imp:0},
+  {date:"Mié 03 Jun",event:"ADP Empleo",sig:"cau",profit:"+$0.27",imp:1},
+  {date:"Jue 04 Jun",event:"Pre-NFP",sig:"on",profit:"+$0.39",imp:0},
+  {date:"Vie 05 Jun",event:"🔴 NFP",sig:"off",profit:"PAUSADO",imp:3},
+  {date:"Sáb 06 Jun",event:"Post-NFP",sig:"on",profit:"+$0.39",imp:0},
+  {date:"Dom 07 Jun",event:"—",sig:"on",profit:"+$0.39",imp:0},
+  {date:"Lun 08 Jun",event:"Pre-CPI",sig:"on",profit:"+$0.39",imp:0},
+  {date:"Mar 09 Jun",event:"Pre-CPI cautela",sig:"cau",profit:"+$0.27",imp:1},
+  {date:"Mié 10 Jun",event:"🔴 CPI Mayo",sig:"off",profit:"PAUSADO",imp:3},
+  {date:"Jue 11 Jun",event:"Post-CPI",sig:"cau",profit:"+$0.27",imp:2},
+  {date:"Vie 12 Jun",event:"Digestión CPI",sig:"cau",profit:"+$0.27",imp:1},
+  {date:"Sáb 13 Jun",event:"—",sig:"on",profit:"+$0.39",imp:0},
+  {date:"Dom 14 Jun",event:"FOMC Blackout",sig:"cau",profit:"+$0.27",imp:2},
+  {date:"Lun 15 Jun",event:"🟡 Pre-FOMC",sig:"cau",profit:"+$0.27",imp:2},
+  {date:"Mar 16 Jun",event:"🔴 FOMC Día 1",sig:"off",profit:"PAUSADO",imp:3},
+  {date:"Mié 17 Jun",event:"🔴 FOMC Decisión",sig:"off",profit:"PAUSADO",imp:3},
+  {date:"Jue 18 Jun",event:"🔴 Post-FOMC",sig:"off",profit:"PAUSADO",imp:3},
+  {date:"Vie 19 Jun",event:"Post-FOMC",sig:"cau",profit:"+$0.27",imp:2},
+  {date:"Sáb 20 Jun",event:"PCE Mayo",sig:"on",profit:"+$0.39",imp:1},
+  {date:"Dom 21 Jun",event:"—",sig:"on",profit:"+$0.39",imp:0},
+  {date:"Lun 22 Jun",event:"Ventana limpia",sig:"on",profit:"+$0.39",imp:0},
+  {date:"Mar 23 Jun",event:"Ventana limpia",sig:"on",profit:"+$0.39",imp:0},
+  {date:"Mié 24 Jun",event:"Ventana limpia",sig:"on",profit:"+$0.39",imp:0},
+];
+
+const calBody = document.getElementById('calBody');
+calData.forEach(d => {
+  const rowClass = d.imp >= 3 ? 'cal-row event-high' : d.imp == 2 ? 'cal-row event-med' : d.imp == 1 ? 'cal-row event-low' : 'cal-row';
+  const pColor = d.sig === 'off' ? 'var(--red)' : d.sig === 'cau' ? 'var(--yellow)' : 'var(--green)';
+  calBody.innerHTML += `
+    <div class="${rowClass}">
+      <div class="cal-date">${d.date}</div>
+      <div class="cal-event">${d.event}</div>
+      <div><span class="sig-tag ${d.sig}">${d.sig==='on'?'🟢 ON':d.sig==='off'?'🔴 OFF':'🟡 CAUT'}</span></div>
+      <div class="profit-col" style="color:${pColor}">${d.profit}</div>
+    </div>`;
+});
+
+// Cumulative chart
+const cumProfits = [];
+let cum = 0;
+calData.forEach(d => {
+  const p = d.profit.startsWith('+') ? parseFloat(d.profit.replace('+$','')) : 0;
+  cum += p;
+  cumProfits.push({cum: parseFloat(cum.toFixed(2)), sig: d.sig, date: d.date.split(' ').slice(1).join(' ')});
+});
+
+const canvas = document.getElementById('cumChart');
+const ctx = canvas.getContext('2d');
+function drawChart() {
+  const W = canvas.offsetWidth, H = 170;
+  canvas.width = W*devicePixelRatio; canvas.height = H*devicePixelRatio;
+  ctx.scale(devicePixelRatio, devicePixelRatio);
+  const pL=42,pR=14,pT=14,pB=28,cW=W-pL-pR,cH=H-pT-pB;
+  const n=cumProfits.length;
+  const maxV=12,minV=0;
+  const toX=i=>pL+(i/(n-1))*cW;
+  const toY=v=>pT+cH-((v-minV)/(maxV-minV))*cH;
+
+  // grid lines
+  [0,3,6,9,12].forEach(v=>{
+    const y=toY(v);
+    ctx.beginPath();ctx.strokeStyle='#1a1f30';ctx.lineWidth=1;ctx.setLineDash([2,5]);
+    ctx.moveTo(pL,y);ctx.lineTo(W-pR,y);ctx.stroke();ctx.setLineDash([]);
+    ctx.fillStyle='#3a4560';ctx.font='8px IBM Plex Mono,monospace';
+    ctx.fillText('$'+v,2,y+3);
+  });
+
+  // FOMC zone shade
+  const fomcStart = toX(20), fomcEnd = toX(23);
+  ctx.fillStyle='#ff2d5508';
+  ctx.fillRect(fomcStart,pT,fomcEnd-fomcStart,cH);
+  ctx.fillStyle='#ff2d5540';ctx.font='8px IBM Plex Mono,monospace';ctx.textAlign='center';
+  ctx.fillText('FOMC',fomcStart+(fomcEnd-fomcStart)/2,pT+10);
+  ctx.textAlign='left';
+
+  // CPI zone
+  const cpiX = toX(16);
+  ctx.fillStyle='#ffd60a06';
+  ctx.fillRect(cpiX-8,pT,16,cH);
+  ctx.fillStyle='#ffd60a50';ctx.font='8px IBM Plex Mono,monospace';ctx.textAlign='center';
+  ctx.fillText('CPI',cpiX,pT+10);ctx.textAlign='left';
+
+  // Area fill
+  ctx.beginPath();
+  cumProfits.forEach((d,i)=>{const x=toX(i),y=toY(d.cum);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);});
+  ctx.lineTo(toX(n-1),H-pB);ctx.lineTo(pL,H-pB);ctx.closePath();
+  const ag=ctx.createLinearGradient(0,0,0,H);
+  ag.addColorStop(0,'#00ff8820');ag.addColorStop(1,'#00ff8803');
+  ctx.fillStyle=ag;ctx.fill();
+
+  // Line
+  ctx.beginPath();ctx.strokeStyle='#00ff88';ctx.lineWidth=2;ctx.lineJoin='round';
+  cumProfits.forEach((d,i)=>{const x=toX(i),y=toY(d.cum);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);});
+  ctx.stroke();
+
+  // Dots
+  cumProfits.forEach((d,i)=>{
+    const x=toX(i),y=toY(d.cum);
+    const col=d.sig==='on'?'#00ff88':d.sig==='off'?'#ff2d55':'#ffd60a';
+    ctx.beginPath();ctx.arc(x,y,3.5,0,Math.PI*2);ctx.fillStyle=col+'40';ctx.fill();
+    ctx.beginPath();ctx.arc(x,y,2,0,Math.PI*2);ctx.fillStyle=col;ctx.fill();
+    // date labels every 7
+    if(i%7===0){
+      ctx.fillStyle='#3a4560';ctx.font='8px IBM Plex Mono,monospace';ctx.textAlign='center';
+      ctx.fillText(d.date,x,H-pB+14);ctx.textAlign='left';
+    }
+  });
+}
+drawChart();
+window.addEventListener('resize',drawChart);
+
+// Weekly bars
+setTimeout(()=>{
+  const max=2.49;
+  document.getElementById('wb1').style.height=(2.49/max*100)+'%';
+  document.getElementById('wb2').style.height=(2.22/max*100)+'%';
+  document.getElementById('wb3').style.height=(1.87/max*100)+'%';
+  document.getElementById('wb4').style.height=(1.32/max*100)+'%';
+},400);
+</script>
+</body>
+</html>

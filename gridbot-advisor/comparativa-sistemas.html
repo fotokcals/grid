@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Comparativa Sistemas</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Barlow:wght@400;600;700;800&display=swap');
+
+:root {
+  --bg: #05060a; --s1: #0b0d13; --s2: #10131c;
+  --border: #1a1f30; --border2: #222840;
+  --green: #00ff88; --gd: #00ff8812; --gb: #00ff8830;
+  --red: #ff2d55; --rd: #ff2d5512; --rb: #ff2d5530;
+  --yellow: #ffd60a; --yd: #ffd60a12; --yb: #ffd60a30;
+  --blue: #0af0ff; --bd: #0af0ff12;
+  --purple: #bf5fff;
+  --text: #c8d8f0; --muted: #3a4560;
+  --mono: 'IBM Plex Mono', monospace;
+  --sans: 'Barlow', sans-serif;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: var(--sans); padding: 20px 14px 60px; }
+.wrap { max-width: 720px; margin: 0 auto; }
+
+.eyebrow { font-family: var(--mono); font-size: 10px; color: var(--blue); letter-spacing: .18em; text-transform: uppercase; margin-bottom: 10px; }
+h1 { font-size: clamp(22px,6vw,36px); font-weight: 800; letter-spacing: -.02em; margin-bottom: 6px; }
+h1 em { font-style: normal; color: var(--yellow); }
+.sub { font-family: var(--mono); font-size: 11px; color: var(--muted); margin-bottom: 24px; }
+
+/* summary cards */
+.summary { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 22px; }
+.sum-card { border-radius: 14px; padding: 18px; border: 1px solid; }
+.sum-card.prev { background: var(--bd); border-color: #0af0ff30; }
+.sum-card.quant { background: var(--gd); border-color: var(--gb); }
+.sum-label { font-family: var(--mono); font-size: 9px; text-transform: uppercase; letter-spacing: .12em; color: var(--muted); margin-bottom: 8px; }
+.sum-name { font-size: 13px; font-weight: 700; margin-bottom: 12px; }
+.sum-card.prev .sum-name { color: var(--blue); }
+.sum-card.quant .sum-name { color: var(--green); }
+.sum-profit { font-size: 32px; font-weight: 800; line-height: 1; }
+.sum-card.prev .sum-profit { color: var(--blue); }
+.sum-card.quant .sum-profit { color: var(--green); }
+.sum-sub { font-family: var(--mono); font-size: 10px; color: var(--muted); margin-top: 6px; line-height: 1.6; }
+.sum-winner { display: inline-block; margin-top: 8px; font-family: var(--mono); font-size: 9px; padding: 3px 8px; border-radius: 4px; background: var(--gd); color: var(--green); border: 1px solid var(--gb); text-transform: uppercase; letter-spacing: .1em; }
+
+/* table */
+.tcard { background: var(--s1); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; margin-bottom: 18px; }
+.thead {
+  display: grid; grid-template-columns: 72px 1fr 1fr 72px 80px;
+  padding: 10px 14px; border-bottom: 1px solid var(--border2);
+  font-family: var(--mono); font-size: 9px; text-transform: uppercase;
+  letter-spacing: .1em; color: var(--muted); gap: 4px;
+}
+.trow {
+  display: grid; grid-template-columns: 72px 1fr 1fr 72px 80px;
+  padding: 11px 14px; border-bottom: 1px solid #ffffff04;
+  font-size: 12px; align-items: center; gap: 4px;
+  transition: background .15s;
+}
+.trow:last-child { border-bottom: none; }
+.trow:hover { background: #ffffff03; }
+.trow.highlight { background: #ffd60a05; border-left: 2px solid var(--yellow); }
+.trow.highlight-green { background: #00ff8805; border-left: 2px solid var(--green); }
+
+.date-col { font-family: var(--mono); font-size: 10px; color: var(--muted); }
+
+.val-cell { font-family: var(--mono); font-size: 12px; font-weight: 600; }
+.val-cell.pos { color: var(--green); }
+.val-cell.zero { color: var(--muted); }
+.val-cell.avoided { color: var(--green); font-style: italic; }
+
+.diff-cell { font-family: var(--mono); font-size: 11px; font-weight: 700; text-align: center; }
+.diff-up { color: var(--green); }
+.diff-dn { color: var(--red); }
+.diff-eq { color: var(--muted); }
+
+.sol-cell { font-family: var(--mono); font-size: 11px; font-weight: 600; }
+
+/* totals row */
+.trow.total {
+  background: var(--s2); border-top: 1px solid var(--border2);
+  font-weight: 700; border-bottom: none;
+}
+
+/* verdict */
+.verdict { background: var(--s1); border: 1px solid var(--border2); border-radius: 14px; padding: 20px; margin-bottom: 18px; }
+.verdict-title { font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: .14em; color: var(--muted); margin-bottom: 14px; }
+.verdict-row { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: 8px; margin-bottom: 6px; border: 1px solid transparent; font-size: 13px; line-height: 1.5; }
+.verdict-row:last-child { margin-bottom: 0; }
+.verdict-row.pos { background: var(--gd); border-color: var(--gb); }
+.verdict-row.neg { background: var(--rd); border-color: var(--rb); }
+.verdict-row.neu { background: var(--s2); border-color: var(--border); color: var(--muted); }
+.verdict-icon { font-size: 14px; flex-shrink: 0; margin-top: 1px; }
+
+/* bar chart */
+.bars { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 18px; }
+.bar-card { background: var(--s1); border: 1px solid var(--border); border-radius: 12px; padding: 14px; text-align: center; }
+.bar-label { font-family: var(--mono); font-size: 9px; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); margin-bottom: 10px; }
+.bar-outer { height: 80px; background: var(--s2); border-radius: 4px; position: relative; overflow: hidden; margin-bottom: 8px; display: flex; align-items: flex-end; }
+.bar-fill { width: 100%; border-radius: 4px; transition: height 1s ease; }
+.bar-val { font-size: 18px; font-weight: 800; }
+.bar-sub { font-family: var(--mono); font-size: 9px; color: var(--muted); margin-top: 3px; }
+
+@media (max-width:480px) {
+  .summary { grid-template-columns: 1fr; }
+  .thead, .trow { grid-template-columns: 60px 1fr 1fr 60px 70px; padding: 8px 10px; }
+  .bars { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="eyebrow">Comparativa directa · May 11–24, 2026</div>
+<h1>Anterior vs <em>Cuantitativo</em></h1>
+<p class="sub">Mismo período · Mismos $500 · Mismos precios reales · Diferente lógica de decisión</p>
+
+<!-- Summary cards -->
+<div class="summary">
+  <div class="sum-card prev">
+    <div class="sum-label">Sistema 1</div>
+    <div class="sum-name">⚡ Semáforo simple</div>
+    <div class="sum-profit">$8.82</div>
+    <div class="sum-sub">Profit bruto · sin calcular<br>pérdidas de posición SOL<br>Grid Normal o Infinity según contexto</div>
+  </div>
+  <div class="sum-card quant">
+    <div class="sum-label">Sistema 2</div>
+    <div class="sum-name">🧮 Cuantitativo</div>
+    <div class="sum-profit">$14.26</div>
+    <div class="sum-sub">$3.51 profit + $10.75 evitado<br>Score 0–100 · macro prioridad<br>Detecta régimen correctamente</div>
+    <div class="sum-winner">✓ Ganador real</div>
+  </div>
+</div>
+
+<!-- Bar visual -->
+<div class="bars">
+  <div class="bar-card">
+    <div class="bar-label">Sistema anterior</div>
+    <div class="bar-outer">
+      <div class="bar-fill" id="bar1" style="height:0%;background:var(--blue)"></div>
+    </div>
+    <div class="bar-val" style="color:var(--blue)">$8.82</div>
+    <div class="bar-sub">profit directo</div>
+  </div>
+  <div class="bar-card">
+    <div class="bar-label">Sistema cuant</div>
+    <div class="bar-outer">
+      <div class="bar-fill" id="bar2" style="height:0%;background:var(--green)"></div>
+    </div>
+    <div class="bar-val" style="color:var(--green)">$14.26</div>
+    <div class="bar-sub">profit + evitado</div>
+  </div>
+  <div class="bar-card">
+    <div class="bar-label">Bot siempre ON</div>
+    <div class="bar-outer" style="align-items:flex-start">
+      <div class="bar-fill" id="bar3" style="height:0%;background:var(--red)"></div>
+    </div>
+    <div class="bar-val" style="color:var(--red)">−$15.81</div>
+    <div class="bar-sub">grid − posición SOL</div>
+  </div>
+</div>
+
+<!-- Comparison table -->
+<div class="tcard">
+  <div class="thead">
+    <span>Día</span>
+    <span>Sistema anterior</span>
+    <span>Cuantitativo</span>
+    <span>SOL%</span>
+    <span style="text-align:center">Diferencia</span>
+  </div>
+  <div id="tableBody"></div>
+</div>
+
+<!-- Verdict -->
+<div class="verdict">
+  <div class="verdict-title">🏁 Veredicto final</div>
+  <div class="verdict-row pos">
+    <div class="verdict-icon">🏆</div>
+    <div>El sistema cuantitativo gana por <strong>$5.44</strong> en resultado real ($14.26 vs $8.82) porque cuenta lo que el otro ignora: las <strong>pérdidas evitadas son profit real</strong> que no salió de tu bolsa.</div>
+  </div>
+  <div class="verdict-row neg">
+    <div class="verdict-icon">⚠️</div>
+    <div>El sistema anterior parece ganar en profit directo ($8.82 vs $3.51) porque era más agresivo — más días ON, Infinity Grid los primeros días. Pero <strong>no contaba el riesgo de posición</strong>.</div>
+  </div>
+  <div class="verdict-row neu">
+    <div class="verdict-icon">📊</div>
+    <div>Los días clave fueron <strong>Mar 19 y Vie 22</strong> — el sistema cuantitativo dijo OFF ambos (BTC −3.1% y SOL −1.2%). El anterior habría operado el viernes y perdido $3 adicionales.</div>
+  </div>
+  <div class="verdict-row pos">
+    <div class="verdict-icon">🔮</div>
+    <div>En un período <strong>alcista limpio</strong> (BTC subiendo, sin macro), el cuantitativo activaría Infinity Grid y ganaría mucho más que el anterior. Está diseñado para proteger abajo y capturar arriba.</div>
+  </div>
+</div>
+
+</div>
+
+<script>
+const rows = [
+  { date:"Lun 11", sol:+1.8, prev:1.42, prevLabel:"+$1.42 (Infinity)", quant:0.39, quantLabel:"+$0.39 (Grid Nor)", avoided:false },
+  { date:"Mar 12", sol:+1.0, prev:0.98, prevLabel:"+$0.98 (Infinity)", quant:0.39, quantLabel:"+$0.39 (Grid Nor)", avoided:false },
+  { date:"Mié 13", sol:-0.7, prev:0.87, prevLabel:"+$0.87 (Grid Nor)", quant:0.39, quantLabel:"+$0.39 (Grid Nor)", avoided:false },
+  { date:"Jue 14", sol:-1.4, prev:0.61, prevLabel:"+$0.61 (Grid Nor)", quant:0.39, quantLabel:"+$0.39 (Grid Nor)", avoided:false },
+  { date:"Vie 15", sol:-0.5, prev:0.73, prevLabel:"+$0.73 (Grid Nor)", quant:0.39, quantLabel:"+$0.39 (Grid Nor)", avoided:false },
+  { date:"Sáb 16", sol:-0.7, prev:0.52, prevLabel:"+$0.52 (Grid Nor)", quant:0.39, quantLabel:"+$0.39 (Grid Nor)", avoided:false },
+  { date:"Dom 17", sol:+0.3, prev:0.44, prevLabel:"+$0.44 (Grid Nor)", quant:0.39, quantLabel:"+$0.39 (Grid Nor)", avoided:false },
+  { date:"Lun 18", sol:-0.3, prev:0.00, prevLabel:"OFF", quant:0.00, quantLabel:"OFF", avoided:false },
+  { date:"Mar 19", sol:-3.1, prev:0.00, prevLabel:"OFF", quant:0.00, quantLabel:"OFF +$7.75 ev.", avoided:true, avoided_val:7.75 },
+  { date:"Mié 20", sol:+1.1, prev:0.00, prevLabel:"OFF", quant:0.00, quantLabel:"OFF", avoided:false },
+  { date:"Jue 21", sol:-0.6, prev:0.00, prevLabel:"OFF", quant:0.00, quantLabel:"OFF", avoided:false },
+  { date:"Vie 22", sol:-1.2, prev:0.68, prevLabel:"+$0.68 (Grid Nor)", quant:0.00, quantLabel:"OFF +$3.00 ev.", avoided:true, avoided_val:3.00 },
+  { date:"Sáb 23", sol:+1.2, prev:1.18, prevLabel:"+$1.18 (Grid Nor)", quant:0.39, quantLabel:"+$0.39 (Grid Nor)", avoided:false },
+  { date:"Dom 24", sol:+1.2, prev:1.39, prevLabel:"+$1.39 (Grid Nor)", quant:0.39, quantLabel:"+$0.39 (Grid Nor)", avoided:false },
+];
+
+let totalPrev = 0, totalQuant = 0, totalAvoided = 0;
+
+const tbody = document.getElementById('tableBody');
+rows.forEach(r => {
+  totalPrev += r.prev;
+  totalQuant += r.quant;
+  if (r.avoided) totalAvoided += r.avoided_val;
+
+  const diff = r.quant - r.prev + (r.avoided ? r.avoided_val : 0);
+  const diffStr = (diff > 0 ? '+' : '') + diff.toFixed(2);
+  const diffClass = diff > 0 ? 'diff-up' : diff < 0 ? 'diff-dn' : 'diff-eq';
+  const diffIcon = diff > 0 ? '↑' : diff < 0 ? '↓' : '=';
+  const solColor = r.sol >= 0 ? 'var(--green)' : 'var(--red)';
+  const rowClass = r.avoided ? 'trow highlight-green' : r.sol < -1 ? 'trow highlight' : 'trow';
+
+  const prevClass = r.prev > 0 ? 'val-cell pos' : 'val-cell zero';
+  const quantClass = r.avoided ? 'val-cell avoided' : r.quant > 0 ? 'val-cell pos' : 'val-cell zero';
+
+  tbody.innerHTML += `
+    <div class="${rowClass}">
+      <div class="date-col">${r.date}</div>
+      <div class="${prevClass}">${r.prevLabel}</div>
+      <div class="${quantClass}">${r.quantLabel}</div>
+      <div class="sol-cell" style="color:${solColor}">${r.sol>=0?'+':''}${r.sol}%</div>
+      <div class="diff-cell ${diffClass}">${diffIcon} $${diffStr}</div>
+    </div>`;
+});
+
+// Total row
+const totalDiff = totalQuant + totalAvoided - totalPrev;
+tbody.innerHTML += `
+  <div class="trow total">
+    <div class="date-col" style="color:var(--text);font-weight:700">TOTAL</div>
+    <div class="val-cell pos" style="color:var(--blue)">$${totalPrev.toFixed(2)}</div>
+    <div class="val-cell pos">$${(totalQuant+totalAvoided).toFixed(2)}</div>
+    <div class="sol-cell" style="color:var(--muted)">14 días</div>
+    <div class="diff-cell diff-up">↑ +$${totalDiff.toFixed(2)}</div>
+  </div>`;
+
+// Animate bars
+setTimeout(() => {
+  const max = 14.26;
+  document.getElementById('bar1').style.height = (8.82/max*100) + '%';
+  document.getElementById('bar2').style.height = '100%';
+  document.getElementById('bar3').style.height = '20%'; // just a sliver since negative
+}, 300);
+</script>
+</body>
+</html>

@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Grid Bot Advisor</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:ital,wght@0,400;0,500;1,400&family=Outfit:wght@300;400;500;600;700&display=swap');
+
+:root {
+  --bg: #060709;
+  --s1: #0c0e13;
+  --s2: #12151d;
+  --s3: #181c26;
+  --border: #1a1f2e;
+  --border2: #222840;
+  --green: #05f5a0;
+  --gd: #05f5a012;
+  --gb: #05f5a030;
+  --red: #ff3355;
+  --rd: #ff335512;
+  --rb: #ff335530;
+  --yellow: #ffcc00;
+  --yd: #ffcc0012;
+  --yb: #ffcc0030;
+  --blue: #38b6ff;
+  --text: #c8d4e8;
+  --muted: #3d4a62;
+  --dim: #232b3d;
+  --mono: 'DM Mono', monospace;
+  --display: 'Bebas Neue', sans-serif;
+  --body: 'Outfit', sans-serif;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--body);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Noise texture overlay */
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events: none; z-index: 0; opacity: .4;
+}
+
+.app { position: relative; z-index: 1; max-width: 520px; margin: 0 auto; padding: 28px 16px 80px; }
+
+/* ── HEADER ── */
+.header { margin-bottom: 32px; }
+
+.logo-row { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+.logo-icon {
+  width: 42px; height: 42px; border-radius: 10px;
+  background: linear-gradient(135deg, #05f5a015, #38b6ff15);
+  border: 1px solid var(--gb);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px;
+}
+.logo-text { font-family: var(--display); font-size: 26px; letter-spacing: .06em; color: var(--text); }
+.logo-text span { color: var(--green); }
+.version-tag {
+  margin-left: auto;
+  font-family: var(--mono); font-size: 9px;
+  color: var(--muted); letter-spacing: .15em; text-transform: uppercase;
+  padding: 3px 8px; border-radius: 4px;
+  border: 1px solid var(--border2); background: var(--s1);
+}
+
+.pair-row { display: flex; align-items: center; gap: 10px; }
+.pair-badge {
+  font-family: var(--mono); font-size: 11px; font-weight: 500;
+  color: var(--blue); background: #38b6ff12; border: 1px solid #38b6ff25;
+  padding: 4px 10px; border-radius: 6px;
+}
+.capital-badge {
+  font-family: var(--mono); font-size: 11px;
+  color: var(--muted); background: var(--s1); border: 1px solid var(--border);
+  padding: 4px 10px; border-radius: 6px;
+}
+.time-badge {
+  margin-left: auto;
+  font-family: var(--mono); font-size: 10px; color: var(--muted);
+}
+
+/* ── MAIN SIGNAL CARD ── */
+.signal-card {
+  border-radius: 20px; padding: 28px 24px; margin-bottom: 16px;
+  border: 1px solid var(--border); background: var(--s1);
+  position: relative; overflow: hidden;
+  transition: all .4s ease;
+}
+
+.signal-card::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--accent-color, var(--green)), transparent);
+  opacity: 0;
+  transition: opacity .4s;
+}
+.signal-card.loaded::before { opacity: 1; }
+
+.signal-card-bg {
+  position: absolute; inset: 0; border-radius: 20px;
+  opacity: 0; transition: opacity .5s;
+}
+.signal-card.loaded .signal-card-bg { opacity: 1; }
+
+/* idle state */
+.idle-state { text-align: center; padding: 20px 0; }
+.idle-icon { font-size: 48px; margin-bottom: 16px; opacity: .4; }
+.idle-text { font-family: var(--mono); font-size: 12px; color: var(--muted); line-height: 1.8; }
+
+/* loading state */
+.loading-state { display: none; text-align: center; padding: 20px 0; }
+.loading-ring {
+  width: 48px; height: 48px; margin: 0 auto 16px;
+  border-radius: 50%;
+  border: 2px solid var(--border2);
+  border-top-color: var(--green);
+  animation: spin 1s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-steps { font-family: var(--mono); font-size: 11px; color: var(--muted); line-height: 2; }
+.loading-step { opacity: .3; transition: opacity .3s; }
+.loading-step.active { opacity: 1; color: var(--green); }
+.loading-step.done { opacity: .6; color: var(--text); }
+
+/* result state */
+.result-state { display: none; }
+
+.signal-main { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 20px; }
+.signal-emoji { font-size: 52px; line-height: 1; flex-shrink: 0; }
+
+.signal-right { flex: 1; }
+.signal-action {
+  font-family: var(--display); font-size: 44px; line-height: 1;
+  letter-spacing: .04em; margin-bottom: 4px;
+}
+.signal-action.on { color: var(--green); }
+.signal-action.off { color: var(--red); }
+.signal-action.cau { color: var(--yellow); }
+
+.signal-grid-type {
+  font-family: var(--mono); font-size: 12px; font-weight: 500;
+  letter-spacing: .1em; text-transform: uppercase;
+}
+.signal-grid-type.inf { color: var(--blue); }
+.signal-grid-type.nor { color: var(--yellow); }
+.signal-grid-type.off { color: var(--muted); }
+
+.signal-summary {
+  font-size: 14px; line-height: 1.6; color: var(--text);
+  padding: 14px 16px; border-radius: 12px;
+  background: var(--s2); border: 1px solid var(--border);
+  margin-bottom: 16px;
+}
+
+/* timer block */
+.timer-block {
+  background: var(--s2); border: 1px solid var(--border2);
+  border-radius: 12px; padding: 14px 16px; margin-bottom: 16px;
+}
+.timer-label { font-family: var(--mono); font-size: 9px; text-transform: uppercase; letter-spacing: .15em; color: var(--muted); margin-bottom: 10px; }
+.timer-row { display: flex; align-items: center; gap: 10px; }
+.timer-icon { font-size: 18px; }
+.timer-text { font-size: 13px; font-weight: 500; flex: 1; line-height: 1.4; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; }
+.timer-badge {
+  font-family: var(--mono); font-size: 11px; font-weight: 700;
+  padding: 4px 10px; border-radius: 8px;
+  white-space: nowrap;
+}
+.timer-badge.on { background: var(--gd); color: var(--green); border: 1px solid var(--gb); }
+.timer-badge.off { background: var(--rd); color: var(--red); border: 1px solid var(--rb); }
+.timer-badge.cau { background: var(--yd); color: var(--yellow); border: 1px solid var(--yb); }
+
+/* news breakdown */
+.news-section { margin-bottom: 16px; }
+.news-section-label { font-family: var(--mono); font-size: 9px; text-transform: uppercase; letter-spacing: .15em; color: var(--muted); margin-bottom: 8px; }
+.news-item {
+  display: flex; gap: 10px; align-items: flex-start;
+  padding: 10px 12px; border-radius: 10px; margin-bottom: 6px;
+  border: 1px solid transparent;
+  font-size: 13px; line-height: 1.5;
+}
+.news-item.neg { background: var(--rd); border-color: var(--rb); }
+.news-item.pos { background: var(--gd); border-color: var(--gb); }
+.news-item.neu { background: var(--s2); border-color: var(--border); color: var(--muted); }
+.news-item-icon { flex-shrink: 0; font-size: 14px; margin-top: 1px; }
+
+/* confidence */
+.confidence-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 16px; border-radius: 10px;
+  background: var(--s2); border: 1px solid var(--border);
+}
+.conf-label { font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); }
+.conf-bar { flex: 1; height: 4px; background: var(--border2); border-radius: 2px; overflow: hidden; }
+.conf-fill { height: 100%; border-radius: 2px; background: var(--green); transition: width 1s ease; }
+.conf-val { font-family: var(--mono); font-size: 12px; font-weight: 700; color: var(--green); min-width: 36px; text-align: right; }
+
+/* ── BUTTONS ── */
+.btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+
+.btn {
+  padding: 14px 0; border-radius: 14px;
+  font-family: var(--mono); font-size: 11px; font-weight: 500;
+  letter-spacing: .1em; text-transform: uppercase;
+  cursor: pointer; border: 1px solid; transition: all .2s;
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+}
+.btn-sub { font-size: 9px; letter-spacing: .05em; opacity: .6; font-style: italic; text-transform: none; }
+
+.btn-morning {
+  background: linear-gradient(135deg, #05f5a008, #38b6ff08);
+  border-color: var(--gb); color: var(--green);
+}
+.btn-morning:hover { background: linear-gradient(135deg, #05f5a015, #38b6ff15); transform: translateY(-1px); }
+
+.btn-night {
+  background: linear-gradient(135deg, #38b6ff08, #a78bfa08);
+  border-color: #38b6ff30; color: var(--blue);
+}
+.btn-night:hover { background: linear-gradient(135deg, #38b6ff15, #a78bfa15); transform: translateY(-1px); }
+
+.btn-full {
+  grid-column: 1/-1;
+  padding: 16px; border-radius: 14px;
+  background: linear-gradient(135deg, #05f5a015, #38b6ff10);
+  border: 1px solid var(--gb); color: var(--green);
+  font-family: var(--mono); font-size: 12px; font-weight: 500;
+  letter-spacing: .1em; text-transform: uppercase; cursor: pointer;
+  transition: all .2s; text-align: center;
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+}
+.btn-full:hover { background: linear-gradient(135deg, #05f5a022, #38b6ff18); transform: translateY(-1px); }
+.btn-full:disabled { opacity: .4; cursor: not-allowed; transform: none; }
+
+/* ── NEXT EVENTS ── */
+.events-card {
+  background: var(--s1); border: 1px solid var(--border);
+  border-radius: 16px; padding: 18px; margin-bottom: 16px;
+}
+.events-title { font-family: var(--mono); font-size: 9px; text-transform: uppercase; letter-spacing: .15em; color: var(--muted); margin-bottom: 12px; }
+.event-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 0; border-bottom: 1px solid var(--border);
+}
+.event-row:last-child { border-bottom: none; }
+.event-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.event-dot.high { background: var(--red); box-shadow: 0 0 6px var(--red); }
+.event-dot.med { background: var(--yellow); }
+.event-dot.low { background: var(--muted); }
+.event-name { font-size: 13px; flex: 1; }
+.event-date { font-family: var(--mono); font-size: 10px; color: var(--muted); }
+.event-impact {
+  font-family: var(--mono); font-size: 9px; text-transform: uppercase;
+  padding: 2px 7px; border-radius: 4px;
+}
+.event-impact.high { background: var(--rd); color: var(--red); }
+.event-impact.med { background: var(--yd); color: var(--yellow); }
+.event-impact.low { background: var(--s2); color: var(--muted); }
+
+/* ── MARKET SNAPSHOT ── */
+.snapshot { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px; }
+.snap-card {
+  background: var(--s1); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px;
+}
+.snap-label { font-family: var(--mono); font-size: 9px; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); margin-bottom: 5px; }
+.snap-val { font-size: 20px; font-weight: 700; line-height: 1; }
+.snap-change { font-family: var(--mono); font-size: 10px; margin-top: 3px; }
+.snap-change.up { color: var(--green); }
+.snap-change.down { color: var(--red); }
+.snap-change.flat { color: var(--muted); }
+
+/* ── ERROR ── */
+.error-state {
+  display: none; text-align: center; padding: 20px 0;
+  font-family: var(--mono); font-size: 12px; color: var(--red); line-height: 1.8;
+}
+
+/* ── FOOTER ── */
+.footer {
+  text-align: center; margin-top: 28px;
+  font-family: var(--mono); font-size: 9px; color: var(--muted);
+  letter-spacing: .1em; line-height: 2;
+}
+.footer span { color: var(--dim); }
+
+.regime-badge, .risk-badge, .score-badge {
+    font-family: var(--mono); font-size: 9px; text-transform: uppercase;
+    letter-spacing: .1em; padding: 3px 8px; border-radius: 5px; border: 1px solid;
+  }
+  .regime-badge { color: var(--blue); background: var(--bd); border-color: #38b6ff30; }
+  .risk-badge.low { color: var(--green); background: var(--gd); border-color: var(--gb); }
+  .risk-badge.med { color: var(--yellow); background: var(--yd); border-color: var(--yb); }
+  .risk-badge.high { color: var(--red); background: var(--rd); border-color: var(--rb); }
+  .score-badge { color: #a78bfa; background: #a78bfa12; border-color: #a78bfa30; }
+
+  .shutdown-block {
+    background: #ff335508; border: 1px solid var(--rb);
+    border-radius: 12px; padding: 12px 14px; margin-bottom: 14px;
+  }
+  .shutdown-text {
+    font-family: var(--mono); font-size: 11px; color: var(--red);
+    line-height: 1.7; margin-top: 6px;
+  }
+
+/* animations */
+.fade-in { animation: fadeIn .5s ease forwards; }
+@keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+
+.result-item { opacity: 0; animation: fadeIn .4s ease forwards; }
+.result-item:nth-child(1) { animation-delay: .1s; }
+.result-item:nth-child(2) { animation-delay: .2s; }
+.result-item:nth-child(3) { animation-delay: .3s; }
+.result-item:nth-child(4) { animation-delay: .4s; }
+.result-item:nth-child(5) { animation-delay: .5s; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="logo-row">
+      <div class="logo-icon">⚡</div>
+      <div class="logo-text">GRID<span>BOT</span> ADVISOR</div>
+      <div class="version-tag">v1.0</div>
+    </div>
+    <div class="pair-row">
+      <div class="pair-badge">SOL/USDT</div>
+      <div class="capital-badge">$500 · 1x</div>
+      <div class="time-badge" id="currentTime">—</div>
+    </div>
+  </div>
+
+  <!-- Market snapshot -->
+  <div class="snapshot" id="snapshotSection">
+    <div class="snap-card">
+      <div class="snap-label">SOL Price <span id="priceTimestamp" style="color:var(--muted);font-size:8px;margin-left:4px;">cargando...</span></div>
+      <div class="snap-val" id="solPrice">$—</div>
+      <div class="snap-change flat" id="solChange">—</div>
+    </div>
+    <div class="snap-card">
+      <div class="snap-label">BTC Price</div>
+      <div class="snap-val" id="btcPrice">$—</div>
+      <div class="snap-change flat" id="btcChange">—</div>
+    </div>
+  </div>
+
+  <!-- Main signal card -->
+  <div class="signal-card" id="signalCard">
+    <div class="signal-card-bg" id="cardBg"></div>
+
+    <!-- Idle -->
+    <div class="idle-state" id="idleState">
+      <div class="idle-icon">🤖</div>
+      <div class="idle-text">
+        Presiona <strong style="color:var(--text)">Consulta Matutina</strong> o<br>
+        <strong style="color:var(--text)">Consulta Nocturna</strong> para analizar<br>
+        el mercado y recibir tu señal.
+      </div>
+    </div>
+
+    <!-- Loading -->
+    <div class="loading-state" id="loadingState">
+      <div class="loading-ring"></div>
+      <div class="loading-steps">
+        <div class="loading-step" id="step1">⬜ Obteniendo precios en tiempo real...</div>
+        <div class="loading-step" id="step2">⬜ Revisando BTC y SOL...</div>
+        <div class="loading-step" id="step3">⬜ Analizando eventos próximos...</div>
+        <div class="loading-step" id="step4">⬜ Generando señal...</div>
+      </div>
+    </div>
+
+    <!-- Result -->
+    <div class="result-state" id="resultState">
+      <div class="signal-main result-item">
+        <div class="signal-emoji" id="signalEmoji">—</div>
+        <div class="signal-right">
+          <div class="signal-action" id="signalAction">—</div>
+          <div class="signal-grid-type" id="signalGridType">—</div>
+          <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;">
+            <div class="regime-badge" id="regimeBadge">—</div>
+            <div class="risk-badge" id="riskBadge">—</div>
+            <div class="score-badge" id="scoreBadge">—</div>
+          </div>
+        </div>
+      </div>
+      <div class="signal-summary result-item" id="signalSummary">—</div>
+      <div class="timer-block result-item" id="timerBlock">
+        <div class="timer-label">⏱ Tiempo de acción</div>
+        <div class="timer-row">
+          <div class="timer-icon" id="timerIcon">—</div>
+          <div class="timer-text" id="timerText">—</div>
+          <div class="timer-badge" id="timerBadge">—</div>
+        </div>
+      </div>
+      <div class="news-section result-item">
+        <div class="news-section-label">Factores detectados</div>
+        <div id="newsList"></div>
+      </div>
+      <div class="shutdown-block result-item" id="shutdownBlock">
+        <div class="timer-label">🚨 Apagar el bot si...</div>
+        <div class="shutdown-text" id="shutdownText">—</div>
+      </div>
+      <div class="confidence-row result-item">
+        <div class="conf-label">Confianza</div>
+        <div class="conf-bar"><div class="conf-fill" id="confFill" style="width:0%"></div></div>
+        <div class="conf-val" id="confVal">—</div>
+      </div>
+    </div>
+
+    <!-- Error -->
+    <div class="error-state" id="errorState">
+      ⚠️ Error al conectar con la API.<br>
+      Verifica tu conexión e intenta de nuevo.
+    </div>
+  </div>
+
+  <!-- Buttons -->
+  <div class="btn-row">
+    <button class="btn btn-morning" onclick="analyze('morning')" id="btnMorning">
+      🌅 Consulta
+      <span class="btn-sub">7:00 AM · antes de clases</span>
+    </button>
+    <button class="btn btn-night" onclick="analyze('night')" id="btnNight">
+      🌙 Consulta
+      <span class="btn-sub">9:00 PM · revisión nocturna</span>
+    </button>
+  </div>
+  <button class="btn-full" onclick="analyze('full')" id="btnFull">
+    ⚡ Análisis completo ahora
+  </button>
+
+  <!-- Upcoming events -->
+  <div class="events-card">
+    <div class="events-title">📅 Próximos eventos macro</div>
+    <div class="event-row">
+      <div class="event-dot high"></div>
+      <div class="event-name">FOMC Decisión + Dot Plot</div>
+      <div class="event-date">Jun 16–17</div>
+      <div class="event-impact high">ALTO</div>
+    </div>
+    <div class="event-row">
+      <div class="event-dot med"></div>
+      <div class="event-name">CPI Mayo (dato)</div>
+      <div class="event-date">~Jun 11</div>
+      <div class="event-impact med">MEDIO</div>
+    </div>
+    <div class="event-row">
+      <div class="event-dot med"></div>
+      <div class="event-name">NFP Empleos Junio</div>
+      <div class="event-date">~Jul 2</div>
+      <div class="event-impact med">MEDIO</div>
+    </div>
+    <div class="event-row">
+      <div class="event-dot low"></div>
+      <div class="event-name">PCE Inflación</div>
+      <div class="event-date">~Jun 27</div>
+      <div class="event-impact low">BAJO</div>
+    </div>
+  </div>
+
+  <div class="footer">
+    GRIDBOT ADVISOR · SOL/USDT · Pionex<br>
+    <span>Análisis con Claude AI + Web Search en tiempo real</span><br>
+    <span>No es asesoría financiera · DYOR</span>
+  </div>
+
+</div>
+
+<script>
+// ── Clock ──
+function updateClock() {
+  const now = new Date();
+  const h = now.getHours().toString().padStart(2,'0');
+  const m = now.getMinutes().toString().padStart(2,'0');
+  const days = ['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
+  const months = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  document.getElementById('currentTime').textContent =
+    `${days[now.getDay()]} ${now.getDate()} ${months[now.getMonth()]} · ${h}:${m} CDMX`;
+}
+updateClock();
+setInterval(updateClock, 60000);
+
+// ── Precios via proxy /api/prices → Coinpaprika (sin CORS) ──
+async function fetchLivePrices() {
+  const ts = document.getElementById('priceTimestamp');
+  if (ts) ts.textContent = '⟳ actualizando...';
+  try {
+    const res = await fetch('/api/prices');
+    if (!res.ok) throw new Error('prices error');
+    const p = await res.json();
+    if (p.error) throw new Error(p.error);
+
+    // SOL
+    document.getElementById('solPrice').textContent = '$' + parseFloat(p.sol).toFixed(2);
+    const solCh = parseFloat(p.solChange);
+    document.getElementById('solChange').textContent = (solCh >= 0 ? '+' : '') + solCh.toFixed(2) + '% 24h';
+    document.getElementById('solChange').className = 'snap-change ' + (solCh >= 0.1 ? 'up' : solCh <= -0.1 ? 'down' : 'flat');
+
+    // BTC
+    const btcVal = parseFloat(p.btc);
+    document.getElementById('btcPrice').textContent = '$' + (btcVal / 1000).toFixed(1) + 'k';
+    const btcCh = parseFloat(p.btcChange);
+    document.getElementById('btcChange').textContent = (btcCh >= 0 ? '+' : '') + btcCh.toFixed(2) + '% 24h';
+    document.getElementById('btcChange').className = 'snap-change ' + (btcCh >= 0.1 ? 'up' : btcCh <= -0.1 ? 'down' : 'flat');
+
+    if (ts) ts.textContent = '● ' + new Date().toLocaleTimeString('es-MX', {hour:'2-digit',minute:'2-digit'});
+
+  } catch(e) {
+    console.warn('Price error:', e);
+    if (ts) ts.textContent = '✗ error';
+  }
+}
+
+fetchLivePrices();
+setInterval(fetchLivePrices, 120000); // cada 2 min
+
+// ── Loading steps animation ──
+async function animateSteps() {
+  const steps = ['step1','step2','step3','step4'];
+  for (let i = 0; i < steps.length; i++) {
+    if (i > 0) document.getElementById(steps[i-1]).className = 'loading-step done';
+    document.getElementById(steps[i]).className = 'loading-step active';
+    await new Promise(r => setTimeout(r, 900));
+  }
+}
+
+// ── Show/hide states ──
+function showState(state) {
+  document.getElementById('idleState').style.display = 'none';
+  document.getElementById('loadingState').style.display = 'none';
+  document.getElementById('resultState').style.display = 'none';
+  document.getElementById('errorState').style.display = 'none';
+  document.getElementById(state + 'State').style.display = 'block';
+}
+
+function setButtons(disabled) {
+  ['btnMorning','btnNight','btnFull'].forEach(id => {
+    document.getElementById(id).disabled = disabled;
+  });
+}
+
+// ── Render result ──
+function renderResult(data) {
+  const card = document.getElementById('signalCard');
+  card.classList.add('loaded');
+
+  const isOn = data.signal === 'ON';
+  const isOff = data.signal === 'OFF';
+
+  document.getElementById('signalEmoji').textContent =
+    isOn ? '🟢' : isOff ? '🔴' : '🟡';
+
+  const actionEl = document.getElementById('signalAction');
+  actionEl.textContent = isOn ? 'ENCIENDE' : isOff ? 'APAGA' : 'PRECAUCIÓN';
+  actionEl.className = 'signal-action ' + (isOn ? 'on' : isOff ? 'off' : 'cau');
+
+  const gridEl = document.getElementById('signalGridType');
+  const isInfinity = data.gridType === 'INFINITY';
+  const isNormal = data.gridType === 'NORMAL';
+  gridEl.textContent = isInfinity ? '📊 Infinity Grid' : isNormal ? '📊 Grid Normal' : '⏸ Bot pausado';
+  gridEl.className = 'signal-grid-type ' + (isInfinity ? 'inf' : isNormal ? 'nor' : 'off');
+
+  const regimeMap = { LATERAL:'⟺ Lateral', ALCISTA:'↑ Alcista', BAJISTA:'↓ Bajista', INCERTIDUMBRE_MACRO:'⚡ Macro' };
+  document.getElementById('regimeBadge').textContent = regimeMap[data.regime] || (data.regime || '—');
+
+  const riskEl = document.getElementById('riskBadge');
+  const riskMap = { BAJO:'🟢 Riesgo Bajo', MEDIO:'🟡 Riesgo Medio', ALTO:'🔴 Riesgo Alto' };
+  riskEl.textContent = riskMap[data.riskLevel] || data.riskLevel || '—';
+  riskEl.className = 'risk-badge ' + (data.riskLevel === 'BAJO' ? 'low' : data.riskLevel === 'MEDIO' ? 'med' : 'high');
+
+  document.getElementById('scoreBadge').textContent = 'Score: ' + (data.score || data.confidence || '—') + '/100';
+
+  if (data.shutdownConditions) {
+    document.getElementById('shutdownText').textContent = data.shutdownConditions;
+  }
+
+  const bgEl = document.getElementById('cardBg');
+  bgEl.style.background = isOn
+    ? 'radial-gradient(ellipse at top left, #05f5a008, transparent 60%)'
+    : isOff
+    ? 'radial-gradient(ellipse at top left, #ff335508, transparent 60%)'
+    : 'radial-gradient(ellipse at top left, #ffcc0008, transparent 60%)';
+
+  document.getElementById('signalSummary').textContent = data.summary;
+
+  const timerBadge = document.getElementById('timerBadge');
+  document.getElementById('timerIcon').textContent = isOff ? '⏰' : isOn ? '✅' : '⚠️';
+  document.getElementById('timerText').textContent = data.timerText;
+  timerBadge.textContent = data.timerBadge;
+  timerBadge.className = 'timer-badge ' + (isOn ? 'on' : isOff ? 'off' : 'cau');
+
+  const newsList = document.getElementById('newsList');
+  newsList.innerHTML = '';
+  (data.factors || []).forEach(f => {
+    const div = document.createElement('div');
+    div.className = `news-item ${f.type}`;
+    div.innerHTML = `<div class="news-item-icon">${f.icon}</div><div>${f.text}</div>`;
+    newsList.appendChild(div);
+  });
+
+  const conf = data.confidence || 75;
+  document.getElementById('confVal').textContent = conf + '%';
+  setTimeout(() => {
+    document.getElementById('confFill').style.width = conf + '%';
+    const fillEl = document.getElementById('confFill');
+    fillEl.style.background = conf >= 80 ? 'var(--green)' : conf >= 60 ? 'var(--yellow)' : 'var(--red)';
+  }, 300);
+
+  // Update snapshot with prices from analysis response
+  const allText = (data.summary || '') + ' ' + JSON.stringify(data.factors || '');
+  let solP = data.solPrice || null;
+  let btcP = data.btcPrice || null;
+  let solCh = data.solChange || null;
+  let btcCh = data.btcChange || null;
+  let solDir = data.solChangeDir || null;
+  let btcDir = data.btcChangeDir || null;
+
+  if (!solP) {
+    const solMatch = allText.match(/SOL[^$]*\$([0-9]{2,3}(?:\.[0-9]{1,2})?)/i)
+      || allText.match(/~\$([7-9][0-9](?:\.[0-9]{1,2})?)/);
+    if (solMatch) solP = '$' + solMatch[1];
+  }
+  if (!btcP) {
+    const btcMatch = allText.match(/BTC[^$]*\$([0-9]{2,3})[Kk]/i)
+      || allText.match(/\$([0-9]{2,3}(?:,[0-9]{3})?(?:\.[0-9]{3})?)[\s,]?(?:K|k|,000)?[^%]/);
+    if (btcMatch) {
+      const raw = btcMatch[1].replace(',','');
+      btcP = raw.length <= 3 ? '$' + raw + 'k' : '$' + (parseInt(raw)/1000).toFixed(1) + 'k';
+    }
+  }
+  if (!solCh) {
+    const m = allText.match(/SOL[^%+\-]*([+\-][0-9]+(?:\.[0-9]+)?%)/i);
+    if (m) { solCh = m[1]; solDir = solCh.startsWith('+') ? 'up' : 'down'; }
+  }
+  if (!btcCh) {
+    const m = allText.match(/BTC[^%+\-]*([+\-][0-9]+(?:\.[0-9]+)?%)/i);
+    if (m) { btcCh = m[1]; btcDir = btcCh.startsWith('+') ? 'up' : 'down'; }
+  }
+
+  if (solP) {
+    document.getElementById('solPrice').textContent = solP;
+    if (solCh) {
+      document.getElementById('solChange').textContent = solCh + ' 24h';
+      document.getElementById('solChange').className = 'snap-change ' + (solDir || 'flat');
+    }
+  }
+  if (btcP) {
+    document.getElementById('btcPrice').textContent = btcP;
+    if (btcCh) {
+      document.getElementById('btcChange').textContent = btcCh + ' 24h';
+      document.getElementById('btcChange').className = 'snap-change ' + (btcDir || 'flat');
+    }
+  }
+
+  showState('result');
+}
+
+// ── Main analyze function ──
+async function analyze(mode) {
+  showState('loading');
+  setButtons(true);
+
+  ['step1','step2','step3','step4'].forEach(id => {
+    document.getElementById(id).className = 'loading-step';
+  });
+
+  animateSteps();
+
+  const modeLabel = mode === 'morning'
+    ? 'CONSULTA MATUTINA (7 AM CDMX) — decisión para el día de hoy'
+    : mode === 'night'
+    ? 'CONSULTA NOCTURNA (9 PM CDMX) — anticipar mañana y próximos días'
+    : 'ANÁLISIS COMPLETO — señal inmediata con contexto macro completo';
+
+  const prompt = `Eres el asistente de un grid bot de trading para SOL/USDT en Pionex.
+El usuario tiene $500 en 1x sin apalancamiento. Puede usar Grid Normal o Infinity Grid.
+
+CONTEXTO DEL BOT:
+- Grid Normal: mejor en mercados laterales/bajistas, sin exposición direccional, rango $78-$100
+- Infinity Grid: mejor en mercados alcistas, tiene posición en SOL (~50% del capital), sin techo superior
+- FOMC próximo: Jun 16-17 (en ~22 días) — es de alto impacto
+- CPI próximo: ~Jun 11
+
+MODO: ${modeLabel}
+FECHA/HORA ACTUAL: ${new Date().toLocaleString('es-MX', {timeZone: 'America/Mexico_City'})} hora CDMX
+
+TAREA:
+1. Busca en web: precio actual de SOL y BTC, noticias macro de las últimas 24h (Fed, CPI, inflación, geopolítica), y noticias específicas de Solana (outages, ETF flows, hacks).
+2. Analiza el contexto y genera una señal para el bot.
+3. Responde ÚNICAMENTE con un JSON válido con esta estructura exacta (sin backticks, sin texto extra):
+
+{
+  "signal": "ON" | "OFF" | "PRECAUCION",
+  "gridType": "INFINITY" | "NORMAL" | "PAUSADO",
+  "summary": "Resumen en 2-3 oraciones en español explicando la señal",
+  "timerText": "Texto explicando cuánto tiempo ON u OFF y cuándo reactivar/revisar",
+  "timerBadge": "ej: 'Activo 24h' o 'Apagar ~18h' o 'Revisar 7 AM'",
+  "confidence": 85,
+  "solPrice": "precio actual SOL, ej: $86.09",
+  "solChange": "+1.56%",
+  "solChangeDir": "up | down | flat",
+  "btcPrice": "precio BTC abreviado, ej: $77.5k",
+  "btcChange": "+1.17%",
+  "btcChangeDir": "up | down | flat",
+  "regime": "LATERAL | ALCISTA | BAJISTA | INCERTIDUMBRE_MACRO",
+  "riskLevel": "BAJO | MEDIO | ALTO",
+  "score": 85,
+  "shutdownConditions": "condiciones específicas para apagar el bot",
+  "factors": [
+    {"type": "pos|neg|neu", "icon": "emoji", "text": "descripción del factor en español"},
+    {"type": "pos|neg|neu", "icon": "emoji", "text": "descripción del factor en español"},
+    {"type": "pos|neg|neu", "icon": "emoji", "text": "descripción del factor en español"}
+  ]
+}
+
+Reglas para la señal:
+- OFF si: FOMC/CPI en menos de 24h, BTC cae >4% en el día, outage de Solana, noticias hawkish muy fuertes
+- PRECAUCION + Grid Normal si: mercado mixto, eventos en 2-5 días, BTC -2% a -4%
+- ON + Infinity Grid si: mercado alcista, BTC positivo, sin eventos macro en >7 días
+- ON + Grid Normal si: mercado lateral/neutral, sin eventos inmediatos pero contexto incierto
+
+Responde SOLO el JSON.`;
+
+  try {
+    // STEP 1: Get live prices via Coinpaprika proxy
+    document.getElementById('step1').className = 'loading-step active';
+    try {
+      const priceRes = await fetch('/api/prices');
+      const p = await priceRes.json();
+      if (p.sol) {
+        document.getElementById('solPrice').textContent = '$' + parseFloat(p.sol).toFixed(2);
+        const solCh = parseFloat(p.solChange);
+        document.getElementById('solChange').textContent = (solCh >= 0 ? '+' : '') + solCh.toFixed(2) + '% 24h';
+        document.getElementById('solChange').className = 'snap-change ' + (solCh >= 0.1 ? 'up' : solCh <= -0.1 ? 'down' : 'flat');
+      }
+      if (p.btc) {
+        const btcVal = parseFloat(p.btc);
+        document.getElementById('btcPrice').textContent = '$' + (btcVal / 1000).toFixed(1) + 'k';
+        const btcCh = parseFloat(p.btcChange);
+        document.getElementById('btcChange').textContent = (btcCh >= 0 ? '+' : '') + btcCh.toFixed(2) + '% 24h';
+        document.getElementById('btcChange').className = 'snap-change ' + (btcCh >= 0.1 ? 'up' : btcCh <= -0.1 ? 'down' : 'flat');
+      }
+    } catch(e) { console.warn('Price fetch error', e); }
+    document.getElementById('step1').className = 'loading-step done';
+    document.getElementById('step2').className = 'loading-step active';
+
+    // STEP 2–3: Full analysis via Claude API proxy
+    document.getElementById('step2').className = 'loading-step done';
+    document.getElementById('step3').className = 'loading-step active';
+
+    const response = await fetch('/api/analyze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        tools: [{ type: 'web_search_20250305', name: 'web_search' }],
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+
+    document.getElementById('step3').className = 'loading-step done';
+    document.getElementById('step4').className = 'loading-step active';
+
+    const data = await response.json();
+    let text = '';
+    if (data.content) {
+      for (const block of data.content) {
+        if (block.type === 'text') text += block.text;
+      }
+    }
+
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error('No JSON found in response');
+    const clean = jsonMatch[0].replace(/```json|```/g, '').trim();
+    const result = JSON.parse(clean);
+    renderResult(result);
+
+  } catch (err) {
+    console.error(err);
+    showState('error');
+  } finally {
+    setButtons(false);
+  }
+}
+</script>
+</body>
+</html>
