@@ -1,27 +1,27 @@
+// SOL/USDT daily OHLCV — últimas 2 semanas (May 13–26 2025)
+const MOCK_CANDLES = [
+  { date:'2025-05-13', open:162.80, high:171.40, low:159.20, close:168.90 },
+  { date:'2025-05-14', open:168.90, high:174.60, low:165.30, close:172.10 },
+  { date:'2025-05-15', open:172.10, high:178.80, low:169.50, close:176.40 },
+  { date:'2025-05-16', open:176.40, high:180.20, low:170.10, close:171.80 },
+  { date:'2025-05-17', open:171.80, high:173.50, low:164.40, close:166.20 },
+  { date:'2025-05-18', open:166.20, high:169.80, low:161.90, close:167.50 },
+  { date:'2025-05-19', open:167.50, high:175.30, low:166.00, close:173.90 },
+  { date:'2025-05-20', open:173.90, high:181.60, low:172.40, close:179.20 },
+  { date:'2025-05-21', open:179.20, high:184.10, low:175.80, close:177.60 },
+  { date:'2025-05-22', open:177.60, high:179.90, low:169.30, close:171.40 },
+  { date:'2025-05-23', open:171.40, high:174.20, low:165.50, close:168.80 },
+  { date:'2025-05-24', open:168.80, high:176.40, low:167.10, close:174.30 },
+  { date:'2025-05-25', open:174.30, high:179.80, low:172.60, close:177.90 },
+  { date:'2025-05-26', open:177.90, high:182.50, low:175.20, close:180.10 },
+];
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
 
   try {
     const capital = parseFloat(req.query.capital || 500);
-    const days = parseInt(req.query.days || 14);
-
-    const end = new Date();
-    const start = new Date(end.getTime() - days * 24 * 60 * 60 * 1000);
-    const startStr = start.toISOString().split('T')[0];
-    const endStr = end.toISOString().split('T')[0];
-
-    const r = await fetch(
-      `https://api.coinpaprika.com/v1/coins/sol-solana/ohlcv/historical?start=${startStr}&end=${endStr}&limit=${days + 2}`
-    );
-    const raw = await r.json();
-    if (!Array.isArray(raw) || raw.length < 3) {
-      return res.status(500).json({ error: 'No hay suficientes datos históricos' });
-    }
-
-    const candles = raw.map(c => ({
-      date: c.time_open.substring(0, 10),
-      open: c.open, high: c.high, low: c.low, close: c.close,
-    }));
+    const candles = MOCK_CANDLES;
 
     const allLows = candles.map(c => c.low);
     const allHighs = candles.map(c => c.high);
@@ -48,7 +48,7 @@ export default async function handler(req, res) {
     const bhPnL = bhFinal - capital;
 
     res.status(200).json({
-      period: { start: startStr, end: endStr, days: candles.length },
+      period: { start: candles[0].date, end: candles[candles.length-1].date, days: candles.length },
       capital,
       priceStart: +startPrice.toFixed(2),
       priceEnd: +endPrice.toFixed(2),
