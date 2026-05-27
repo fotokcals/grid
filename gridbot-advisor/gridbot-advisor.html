@@ -366,6 +366,39 @@ body::before {
 .rsi-wrap { flex: 1; display: flex; align-items: center; gap: 6px; }
 .rsi-track { flex: 1; height: 4px; background: var(--border2); border-radius: 2px; position: relative; }
 .rsi-thumb { position: absolute; top: -3px; width: 10px; height: 10px; border-radius: 50%; transform: translateX(-50%); border: 2px solid var(--s2); }
+
+/* ── TRANSITION TRIGGER ── */
+.trigger-card {
+  border-radius: 12px; padding: 14px 16px; margin-bottom: 16px;
+  border: 1px solid var(--border2); background: var(--s2);
+  transition: border-color .3s;
+}
+.trigger-card.cambiar { border-color: var(--gb); background: linear-gradient(135deg, var(--s2), #05f5a006); }
+.trigger-card.vigilar { border-color: var(--yb); background: linear-gradient(135deg, var(--s2), #ffcc0006); }
+.trigger-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.trigger-title { font-family: var(--mono); font-size: 9px; text-transform: uppercase; letter-spacing: .15em; color: var(--muted); }
+.trigger-badge {
+  font-family: var(--mono); font-size: 10px; font-weight: 700;
+  padding: 4px 12px; border-radius: 8px; letter-spacing: .08em; text-transform: uppercase;
+}
+.trigger-badge.cambiar { background: var(--gd); color: var(--green); border: 1px solid var(--gb); }
+.trigger-badge.vigilar { background: var(--yd); color: var(--yellow); border: 1px solid var(--yb); }
+.trigger-badge.mantener { background: var(--s1); color: var(--muted); border: 1px solid var(--border); }
+.trigger-conditions { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 12px; }
+.trigger-cond {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 10px; border-radius: 8px;
+  font-size: 12px; border: 1px solid transparent;
+}
+.trigger-cond.ok { background: var(--gd); border-color: var(--gb); }
+.trigger-cond.fail { background: var(--s1); border-color: var(--border); opacity: .6; }
+.trigger-cond-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.trigger-cond.ok .trigger-cond-dot { background: var(--green); box-shadow: 0 0 5px var(--green); }
+.trigger-cond.fail .trigger-cond-dot { background: var(--muted); }
+.trigger-cond-text { font-size: 11px; line-height: 1.3; }
+.trigger-progress { height: 4px; background: var(--border2); border-radius: 2px; overflow: hidden; margin-bottom: 8px; }
+.trigger-progress-fill { height: 100%; border-radius: 2px; transition: width .8s ease; }
+.trigger-action { font-family: var(--mono); font-size: 11px; color: var(--text); text-align: center; padding: 8px; border-radius: 8px; background: var(--s1); border: 1px solid var(--border); }
 </style>
 </head>
 <body>
@@ -464,6 +497,19 @@ body::before {
             <div class="gstat-val" id="gridSpacing">—</div>
           </div>
         </div>
+      </div>
+
+      <!-- Transition Trigger -->
+      <div class="trigger-card result-item" id="triggerCard" style="display:none;">
+        <div class="trigger-header">
+          <div class="trigger-title">⚡ Trigger de transición</div>
+          <div class="trigger-badge" id="triggerBadge">—</div>
+        </div>
+        <div class="trigger-conditions" id="triggerConditions"></div>
+        <div class="trigger-progress">
+          <div class="trigger-progress-fill" id="triggerFill" style="width:0%"></div>
+        </div>
+        <div class="trigger-action" id="triggerAction">—</div>
       </div>
 
       <!-- Technicals -->
@@ -698,6 +744,42 @@ function renderResult(data) {
     fillEl.style.background = conf >= 80 ? 'var(--green)' : conf >= 60 ? 'var(--yellow)' : 'var(--red)';
   }, 300);
 
+  // Transition trigger
+  if (data.transitionTrigger) {
+    const t = data.transitionTrigger;
+    const rec = (t.recommendation || '').toUpperCase();
+    const cls = rec === 'CAMBIAR' ? 'cambiar' : rec === 'VIGILAR' ? 'vigilar' : 'mantener';
+
+    const card = document.getElementById('triggerCard');
+    card.className = `trigger-card result-item ${cls}`;
+    card.style.display = 'block';
+
+    const badge = document.getElementById('triggerBadge');
+    badge.textContent = rec === 'CAMBIAR' ? '→ Cambiar a Infinity' : rec === 'VIGILAR' ? '⚠ Vigilar' : '✓ Mantener';
+    badge.className = `trigger-badge ${cls}`;
+
+    const conds = [
+      { key: 'adxStrong',      label: 'ADX > 25',          sub: 'tendencia fuerte' },
+      { key: 'btcStrong',      label: 'BTC fuerte',        sub: 'momentum positivo' },
+      { key: 'solAboveEMAs',   label: 'SOL > EMA20/50',    sub: 'por encima de medias' },
+      { key: 'volumeGrowing',  label: 'Volumen creciente', sub: 'mayor al promedio' },
+    ];
+    document.getElementById('triggerConditions').innerHTML = conds.map(c => `
+      <div class="trigger-cond ${t[c.key] ? 'ok' : 'fail'}">
+        <div class="trigger-cond-dot"></div>
+        <div class="trigger-cond-text"><strong>${c.label}</strong><br><span style="opacity:.6;font-size:10px;">${c.sub}</span></div>
+      </div>`).join('');
+
+    const met = parseInt(t.conditionsMet) || 0;
+    const fillColor = rec === 'CAMBIAR' ? 'var(--green)' : rec === 'VIGILAR' ? 'var(--yellow)' : 'var(--muted)';
+    const fill = document.getElementById('triggerFill');
+    fill.style.background = fillColor;
+    setTimeout(() => { fill.style.width = (met / 4 * 100) + '%'; }, 300);
+
+    document.getElementById('triggerAction').textContent =
+      t.action || (rec === 'CAMBIAR' ? 'Grid Normal → Infinity Grid' : rec === 'VIGILAR' ? 'Monitorear próximas horas' : 'Mantener configuración actual');
+  }
+
   // Grid params
   if (data.gridParams) {
     const gp = data.gridParams;
@@ -885,6 +967,15 @@ TAREA:
     "resistance": 175.00,
     "volumeSignal": "alto | normal | bajo"
   },
+  "transitionTrigger": {
+    "adxStrong": true,
+    "btcStrong": true,
+    "solAboveEMAs": true,
+    "volumeGrowing": false,
+    "conditionsMet": 3,
+    "recommendation": "CAMBIAR | MANTENER | VIGILAR",
+    "action": "Grid Normal → Infinity Grid | Mantener | Preparar cambio"
+  },
   "factors": [
     {"type": "pos|neg|neu", "icon": "emoji", "text": "descripción del factor en español"},
     {"type": "pos|neg|neu", "icon": "emoji", "text": "descripción del factor en español"},
@@ -903,6 +994,15 @@ PASO 2 — Aplica estas reglas duras (tienen prioridad sobre técnicos):
 - PRECAUCION + Grid Normal si: evento macro en 2-5 días, BTC -2% a -4%, RSI >70 (sobrecomprado)
 - ON + Infinity Grid si: régimen ALCISTA confirmado por técnicos + macro sin eventos en >7 días
 - ON + Grid Normal si: régimen LATERAL o macro incierto pero técnicos no bearish
+
+Reglas para transitionTrigger (evalúa si conviene cambiar de Grid Normal a Infinity Grid):
+- adxStrong: true si ADX > 25 (tendencia fuerte, no lateral)
+- btcStrong: true si BTC está en verde hoy y con momentum positivo
+- solAboveEMAs: true si precio SOL > EMA20 Y precio SOL > EMA50
+- volumeGrowing: true si el volumen de hoy es mayor al promedio reciente
+- conditionsMet: cuenta cuántas son true (0-4)
+- recommendation: "CAMBIAR" si conditionsMet >= 3, "VIGILAR" si conditionsMet == 2, "MANTENER" si conditionsMet <= 1
+- action: texto corto de la acción recomendada
 
 Reglas para gridParams:
 - Infinity Grid: low = soporte más cercano o EMA50, high = null (pon 0 para indicar sin techo), grids = 20-25
