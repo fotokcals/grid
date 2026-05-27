@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Backtest 2 Semanas · SOL Grid</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:ital,wght@0,400;0,500;1,400&family=Outfit:wght@300;400;500;600;700&display=swap');
+:root {
+  --bg:#060709;--s1:#0c0e13;--s2:#12151d;--border:#1a1f2e;--border2:#222840;
+  --green:#05f5a0;--gd:#05f5a012;--gb:#05f5a030;
+  --red:#ff3355;--rd:#ff335512;--rb:#ff335530;
+  --yellow:#ffcc00;--yd:#ffcc0012;--yb:#ffcc0030;
+  --blue:#38b6ff;--purple:#a78bfa;
+  --text:#c8d4e8;--muted:#3d4a62;--dim:#232b3d;
+  --mono:'DM Mono',monospace;--display:'Bebas Neue',sans-serif;--body:'Outfit',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:var(--body);min-height:100vh;}
+body::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");pointer-events:none;z-index:0;opacity:.4;}
+.app{position:relative;z-index:1;max-width:560px;margin:0 auto;padding:24px 16px 80px;}
+
+.header{margin-bottom:24px;}
+.logo-row{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+.logo-icon{width:38px;height:38px;border-radius:9px;background:linear-gradient(135deg,#05f5a015,#38b6ff15);border:1px solid var(--gb);display:flex;align-items:center;justify-content:center;font-size:18px;}
+.logo-text{font-family:var(--display);font-size:22px;letter-spacing:.06em;}
+.logo-text span{color:var(--green);}
+.back-btn{margin-left:auto;font-family:var(--mono);font-size:9px;color:var(--muted);text-decoration:none;border:1px solid var(--border2);padding:4px 10px;border-radius:5px;}
+.back-btn:hover{color:var(--text);border-color:var(--green);}
+.subtitle{font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;}
+
+/* loading */
+.loading{text-align:center;padding:60px 0;}
+.ring{width:48px;height:48px;margin:0 auto 16px;border-radius:50%;border:2px solid var(--border2);border-top-color:var(--green);animation:spin 1s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.loading p{font-family:var(--mono);font-size:11px;color:var(--muted);}
+
+/* period bar */
+.period-bar{display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:10px;background:var(--s1);border:1px solid var(--border);margin-bottom:16px;font-family:var(--mono);font-size:10px;color:var(--muted);}
+.period-bar b{color:var(--text);}
+.price-change{margin-left:auto;font-size:11px;font-weight:700;}
+.price-change.up{color:var(--green);}
+.price-change.down{color:var(--red);}
+
+/* chart */
+.chart-card{background:var(--s1);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:16px;overflow:hidden;}
+.chart-label{font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:10px;}
+.chart-svg{width:100%;display:block;}
+
+/* results grid */
+.results-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px;}
+.result-card{background:var(--s1);border:1px solid var(--border);border-radius:12px;padding:12px 14px;}
+.result-card.winner{border-color:var(--gb);background:linear-gradient(135deg,var(--s1),#05f5a006);}
+.rc-label{font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:6px;line-height:1.3;}
+.rc-pnl{font-family:var(--display);font-size:26px;letter-spacing:.04em;line-height:1;}
+.rc-pnl.pos{color:var(--green);}
+.rc-pnl.neg{color:var(--red);}
+.rc-roi{font-family:var(--mono);font-size:10px;margin-top:3px;}
+.rc-roi.pos{color:var(--green);}
+.rc-roi.neg{color:var(--red);}
+.rc-apr{font-family:var(--mono);font-size:9px;color:var(--muted);margin-top:2px;}
+.winner-badge{display:inline-block;font-family:var(--mono);font-size:8px;text-transform:uppercase;background:var(--gd);color:var(--green);border:1px solid var(--gb);padding:1px 6px;border-radius:3px;margin-bottom:4px;}
+
+/* detail cards */
+.detail-card{background:var(--s2);border:1px solid var(--border2);border-radius:12px;padding:14px 16px;margin-bottom:12px;}
+.dc-title{font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);margin-bottom:10px;}
+.dc-row{display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--border);font-size:12px;}
+.dc-row:last-child{border-bottom:none;}
+.dc-key{font-family:var(--mono);font-size:10px;color:var(--muted);}
+.dc-val{font-family:var(--mono);font-size:11px;font-weight:600;}
+.dc-val.pos{color:var(--green);}
+.dc-val.neg{color:var(--red);}
+.dc-val.blue{color:var(--blue);}
+.dc-val.yellow{color:var(--yellow);}
+
+/* tabs */
+.tabs{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:12px;}
+.tab-btn{padding:9px;border-radius:10px;font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;border:1px solid var(--border2);background:var(--s1);color:var(--muted);transition:all .2s;}
+.tab-btn.active{border-color:var(--gb);color:var(--green);background:var(--gd);}
+
+/* disclaimer */
+.disclaimer{font-family:var(--mono);font-size:9px;color:var(--muted);text-align:center;padding:12px;line-height:1.8;border-top:1px solid var(--border);margin-top:8px;}
+
+.fade-in{animation:fadeIn .4s ease forwards;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="header">
+    <div class="logo-row">
+      <div class="logo-icon">📊</div>
+      <div class="logo-text">BACK<span>TEST</span></div>
+      <a class="back-btn" href="gridbot-advisor.html">← Advisor</a>
+    </div>
+    <div class="subtitle">SOL/USDT · Últimas 2 semanas · $500</div>
+  </div>
+
+  <div id="loadingState" class="loading">
+    <div class="ring"></div>
+    <p>Cargando datos históricos de SOL...</p>
+  </div>
+
+  <div id="mainContent" style="display:none;">
+
+    <div class="period-bar" id="periodBar">—</div>
+
+    <div class="chart-card">
+      <div class="chart-label">📈 Precio SOL — 14 días</div>
+      <svg id="priceChart" class="chart-svg" viewBox="0 0 520 120" preserveAspectRatio="none"></svg>
+    </div>
+
+    <div class="results-grid" id="resultsGrid">—</div>
+
+    <div class="tabs">
+      <button class="tab-btn active" id="tabNormal" onclick="showTab('normal')">⚖️ Grid Normal</button>
+      <button class="tab-btn" id="tabInfinity" onclick="showTab('infinity')">∞ Infinity Grid</button>
+    </div>
+
+    <div id="detailNormal"></div>
+    <div id="detailInfinity" style="display:none;"></div>
+
+    <div class="disclaimer">
+      ⚠️ Backtest simulado con datos OHLCV diarios. No garantiza rendimientos futuros.<br>
+      Grid profit = ciclos completados. PnL no realizado = posición SOL al precio de cierre.
+    </div>
+
+  </div>
+</div>
+
+<script>
+let btData = null;
+
+async function loadBacktest() {
+  try {
+    const r = await fetch('/api/backtest?capital=500&days=14');
+    btData = await r.json();
+    if (btData.error) throw new Error(btData.error);
+    render(btData);
+  } catch(e) {
+    document.getElementById('loadingState').innerHTML =
+      `<p style="color:var(--red);font-family:var(--mono);font-size:12px;">⚠️ Error: ${e.message}</p>`;
+  }
+}
+
+function render(d) {
+  document.getElementById('loadingState').style.display = 'none';
+  document.getElementById('mainContent').style.display = 'block';
+
+  // Period bar
+  const chg = d.priceChangePct;
+  document.getElementById('periodBar').innerHTML =
+    `<b>${d.period.start}</b> → <b>${d.period.end}</b>
+     &nbsp;·&nbsp; ${d.period.days} días
+     &nbsp;·&nbsp; $${d.priceStart} → $${d.priceEnd}
+     <span class="price-change ${chg>=0?'up':'down'}">${chg>=0?'+':''}${chg}%</span>`;
+
+  // Chart
+  drawChart(d.candles, d.gridNormal.low, d.gridNormal.high);
+
+  // Results grid
+  const gn = d.gridNormal;
+  const ig = d.infinityGrid;
+  const bh = d.buyAndHold;
+  const best = [gn.totalPnL, ig.totalPnL, bh.pnl].indexOf(Math.max(gn.totalPnL, ig.totalPnL, bh.pnl));
+
+  document.getElementById('resultsGrid').innerHTML = [
+    { label: 'Grid Normal', pnl: gn.totalPnL, roi: gn.roi, apr: gn.apr, idx: 0 },
+    { label: 'Infinity Grid', pnl: ig.totalPnL, roi: ig.roi, apr: ig.apr, idx: 1 },
+    { label: 'Buy & Hold', pnl: bh.pnl, roi: bh.roi, apr: null, idx: 2 },
+  ].map((s, i) => `
+    <div class="result-card${i===best?' winner':''}">
+      ${i===best?'<div class="winner-badge">✓ Mejor</div>':''}
+      <div class="rc-label">${s.label}</div>
+      <div class="rc-pnl ${s.pnl>=0?'pos':'neg'}">${s.pnl>=0?'+':''}$${Math.abs(s.pnl).toFixed(0)}</div>
+      <div class="rc-roi ${s.roi>=0?'pos':'neg'}">${s.roi>=0?'+':''}${s.roi}%</div>
+      ${s.apr!==null?`<div class="rc-apr">APR ~${s.apr}%</div>`:''}
+    </div>`).join('');
+
+  // Detail cards
+  renderDetail('detailNormal', gn, 'Grid Normal', 'normal');
+  renderDetail('detailInfinity', ig, 'Infinity Grid', 'infinity');
+}
+
+function renderDetail(elId, s, name, type) {
+  const isNormal = type === 'normal';
+  document.getElementById(elId).innerHTML = `
+    <div class="detail-card fade-in">
+      <div class="dc-title">⚙️ Config ${name}</div>
+      ${isNormal
+        ? `<div class="dc-row"><span class="dc-key">Rango</span><span class="dc-val blue">$${s.low} → $${s.high}</span></div>
+           <div class="dc-row"><span class="dc-key">Grids</span><span class="dc-val">${s.grids}</span></div>
+           <div class="dc-row"><span class="dc-key">Espaciado</span><span class="dc-val">$${s.spacing}</span></div>`
+        : `<div class="dc-row"><span class="dc-key">Límite inferior</span><span class="dc-val blue">$${s.low}</span></div>
+           <div class="dc-row"><span class="dc-key">Grids</span><span class="dc-val">${s.grids}</span></div>
+           <div class="dc-row"><span class="dc-key">Espaciado</span><span class="dc-val">${s.spacingPct}%</span></div>`}
+    </div>
+    <div class="detail-card fade-in">
+      <div class="dc-title">💰 Resultados ${name}</div>
+      <div class="dc-row"><span class="dc-key">Capital inicial</span><span class="dc-val">$500.00</span></div>
+      <div class="dc-row"><span class="dc-key">Valor final</span><span class="dc-val ${s.finalValue>=500?'pos':'neg'}">$${s.finalValue}</span></div>
+      <div class="dc-row"><span class="dc-key">Grid profit</span><span class="dc-val ${s.gridProfit>=0?'pos':'neg'}">${s.gridProfit>=0?'+':''}$${s.gridProfit}</span></div>
+      <div class="dc-row"><span class="dc-key">PnL no realizado</span><span class="dc-val ${s.unrealizedPnL>=0?'pos':'neg'}">${s.unrealizedPnL>=0?'+':''}$${s.unrealizedPnL}</span></div>
+      <div class="dc-row"><span class="dc-key">PnL total</span><span class="dc-val ${s.totalPnL>=0?'pos':'neg'}">${s.totalPnL>=0?'+':''}$${s.totalPnL}</span></div>
+      <div class="dc-row"><span class="dc-key">ROI 2 semanas</span><span class="dc-val ${s.roi>=0?'pos':'neg'}">${s.roi>=0?'+':''}${s.roi}%</span></div>
+      <div class="dc-row"><span class="dc-key">APR estimado</span><span class="dc-val yellow">~${s.apr}%</span></div>
+      <div class="dc-row"><span class="dc-key">Trades ejecutados</span><span class="dc-val">${s.trades}</span></div>
+    </div>`;
+}
+
+function showTab(tab) {
+  document.getElementById('tabNormal').className = 'tab-btn' + (tab==='normal'?' active':'');
+  document.getElementById('tabInfinity').className = 'tab-btn' + (tab==='infinity'?' active':'');
+  document.getElementById('detailNormal').style.display = tab==='normal'?'block':'none';
+  document.getElementById('detailInfinity').style.display = tab==='infinity'?'block':'none';
+}
+
+function drawChart(candles, gridLow, gridHigh) {
+  const svg = document.getElementById('priceChart');
+  const W = 520, H = 120, PAD = 8;
+  const prices = candles.map(c => [c.low, c.high]).flat();
+  const minP = Math.min(...prices) * 0.998;
+  const maxP = Math.max(...prices) * 1.002;
+
+  function px(val) { return PAD + ((val - minP) / (maxP - minP)) * (H - PAD * 2); }
+  function py(val) { return H - px(val); }
+  function x(i) { return (i / (candles.length - 1)) * (W - PAD * 2) + PAD; }
+
+  let html = '';
+
+  // Grid lines
+  const glY = py(gridLow);
+  const ghY = py(gridHigh);
+  if (glY >= 0 && glY <= H)
+    html += `<line x1="${PAD}" y1="${glY}" x2="${W-PAD}" y2="${glY}" stroke="#05f5a030" stroke-width="1" stroke-dasharray="4,3"/>`;
+  if (ghY >= 0 && ghY <= H)
+    html += `<line x1="${PAD}" y1="${ghY}" x2="${W-PAD}" y2="${ghY}" stroke="#38b6ff30" stroke-width="1" stroke-dasharray="4,3"/>`;
+
+  // Area fill
+  const closePath = candles.map((c, i) => `${i===0?'M':'L'}${x(i)},${py(c.close)}`).join(' ');
+  html += `<defs><linearGradient id="ag" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#05f5a0" stop-opacity="0.15"/><stop offset="100%" stop-color="#05f5a0" stop-opacity="0"/></linearGradient></defs>`;
+  html += `<path d="${closePath} L${x(candles.length-1)},${H-PAD} L${x(0)},${H-PAD} Z" fill="url(#ag)"/>`;
+
+  // Line
+  html += `<path d="${closePath}" fill="none" stroke="#05f5a0" stroke-width="1.5" stroke-linejoin="round"/>`;
+
+  // Candle wicks (thin)
+  candles.forEach((c, i) => {
+    const col = c.close >= c.open ? '#05f5a060' : '#ff335560';
+    html += `<line x1="${x(i)}" y1="${py(c.high)}" x2="${x(i)}" y2="${py(c.low)}" stroke="${col}" stroke-width="1"/>`;
+  });
+
+  // Start / end dots
+  html += `<circle cx="${x(0)}" cy="${py(candles[0].open)}" r="3" fill="var(--muted)"/>`;
+  const lastC = candles[candles.length-1];
+  const dotCol = lastC.close >= candles[0].open ? '#05f5a0' : '#ff3355';
+  html += `<circle cx="${x(candles.length-1)}" cy="${py(lastC.close)}" r="4" fill="${dotCol}"/>`;
+
+  svg.innerHTML = html;
+}
+
+loadBacktest();
+</script>
+</body>
+</html>
