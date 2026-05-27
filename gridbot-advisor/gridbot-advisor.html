@@ -322,6 +322,50 @@ body::before {
 .result-item:nth-child(3) { animation-delay: .3s; }
 .result-item:nth-child(4) { animation-delay: .4s; }
 .result-item:nth-child(5) { animation-delay: .5s; }
+.result-item:nth-child(6) { animation-delay: .6s; }
+.result-item:nth-child(7) { animation-delay: .7s; }
+
+/* ── GRID CONFIG ── */
+.grid-config {
+  background: var(--s2); border: 1px solid var(--border2);
+  border-radius: 12px; padding: 14px 16px; margin-bottom: 16px;
+}
+.grid-range-row {
+  display: flex; align-items: flex-end; justify-content: space-between;
+  margin-bottom: 12px;
+}
+.range-side { display: flex; flex-direction: column; }
+.range-side.right { align-items: flex-end; }
+.range-lbl { font-family: var(--mono); font-size: 9px; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); margin-bottom: 4px; }
+.range-val { font-family: var(--display); font-size: 30px; letter-spacing: .04em; line-height: 1; }
+.range-arrow { font-family: var(--mono); font-size: 20px; color: var(--border2); padding-bottom: 4px; }
+.grid-stats-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.gstat { background: var(--s1); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; }
+.gstat-lbl { font-family: var(--mono); font-size: 9px; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); margin-bottom: 4px; }
+.gstat-val { font-family: var(--mono); font-size: 15px; font-weight: 700; color: var(--text); }
+
+/* ── TECHNICALS ── */
+.tech-card {
+  background: var(--s2); border: 1px solid var(--border);
+  border-radius: 12px; padding: 14px 16px; margin-bottom: 16px;
+}
+.tech-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 0; border-bottom: 1px solid var(--border);
+}
+.tech-row:last-child { border-bottom: none; }
+.tech-name { font-family: var(--mono); font-size: 10px; color: var(--muted); width: 72px; flex-shrink: 0; }
+.tech-val { font-family: var(--mono); font-size: 11px; font-weight: 600; flex: 1; }
+.tech-badge {
+  font-family: var(--mono); font-size: 9px; text-transform: uppercase;
+  padding: 2px 7px; border-radius: 4px; white-space: nowrap;
+}
+.tech-badge.bull { background: var(--gd); color: var(--green); border: 1px solid var(--gb); }
+.tech-badge.bear { background: var(--rd); color: var(--red); border: 1px solid var(--rb); }
+.tech-badge.neu { background: var(--s1); color: var(--muted); border: 1px solid var(--border); }
+.rsi-wrap { flex: 1; display: flex; align-items: center; gap: 6px; }
+.rsi-track { flex: 1; height: 4px; background: var(--border2); border-radius: 2px; position: relative; }
+.rsi-thumb { position: absolute; top: -3px; width: 10px; height: 10px; border-radius: 50%; transform: translateX(-50%); border: 2px solid var(--s2); }
 </style>
 </head>
 <body>
@@ -395,6 +439,39 @@ body::before {
         </div>
       </div>
       <div class="signal-summary result-item" id="signalSummary">—</div>
+
+      <!-- Grid Config -->
+      <div class="grid-config result-item" id="gridConfig" style="display:none;">
+        <div class="timer-label">⚙️ Configuración recomendada</div>
+        <div class="grid-range-row">
+          <div class="range-side">
+            <div class="range-lbl">Desde</div>
+            <div class="range-val" id="gridLow" style="color:var(--green);">—</div>
+          </div>
+          <div class="range-arrow">→</div>
+          <div class="range-side right">
+            <div class="range-lbl">Hasta</div>
+            <div class="range-val" id="gridHigh" style="color:var(--blue);">—</div>
+          </div>
+        </div>
+        <div class="grid-stats-row">
+          <div class="gstat">
+            <div class="gstat-lbl">Grids</div>
+            <div class="gstat-val" id="gridCount">—</div>
+          </div>
+          <div class="gstat">
+            <div class="gstat-lbl">Espaciado</div>
+            <div class="gstat-val" id="gridSpacing">—</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Technicals -->
+      <div class="tech-card result-item" id="techCard" style="display:none;">
+        <div class="timer-label">📊 Técnicos SOL</div>
+        <div id="techList"></div>
+      </div>
+
       <div class="timer-block result-item" id="timerBlock">
         <div class="timer-label">⏱ Tiempo de acción</div>
         <div class="timer-row">
@@ -617,6 +694,76 @@ function renderResult(data) {
     fillEl.style.background = conf >= 80 ? 'var(--green)' : conf >= 60 ? 'var(--yellow)' : 'var(--red)';
   }, 300);
 
+  // Grid params
+  if (data.gridParams) {
+    const gp = data.gridParams;
+    document.getElementById('gridLow').textContent = '$' + parseFloat(gp.low).toFixed(2);
+    document.getElementById('gridHigh').textContent = (!gp.high || gp.high === 0) ? '∞' : '$' + parseFloat(gp.high).toFixed(2);
+    document.getElementById('gridCount').textContent = gp.grids ? gp.grids + ' grids' : '—';
+    document.getElementById('gridSpacing').textContent = gp.spacing ? '$' + gp.spacing : '—';
+    document.getElementById('gridConfig').style.display = 'block';
+  }
+
+  // Technicals
+  if (data.technicals) {
+    const t = data.technicals;
+    const techList = document.getElementById('techList');
+    techList.innerHTML = '';
+
+    const rsi = parseFloat(t.rsi14);
+    const rsiColor = rsi >= 70 ? 'var(--red)' : rsi <= 30 ? 'var(--green)' : 'var(--yellow)';
+    const rsiPct = Math.min(100, Math.max(0, rsi));
+    const rsiBadge = rsi >= 70 ? 'bear' : rsi <= 30 ? 'bull' : 'neu';
+    techList.innerHTML += `
+      <div class="tech-row">
+        <div class="tech-name">RSI 14</div>
+        <div class="rsi-wrap">
+          <div class="rsi-track">
+            <div class="rsi-thumb" style="left:${rsiPct}%;background:${rsiColor};"></div>
+          </div>
+          <div class="tech-val" style="color:${rsiColor};width:32px;">${rsi}</div>
+        </div>
+        <div class="tech-badge ${rsiBadge}">${t.rsiSignal || '—'}</div>
+      </div>`;
+
+    const price = parseFloat(data.solPrice) || 0;
+    const emas = [['EMA 20', t.ema20], ['EMA 50', t.ema50], ['EMA 200', t.ema200]];
+    emas.forEach(([label, val]) => {
+      if (!val) return;
+      const v = parseFloat(val);
+      const above = price > v;
+      techList.innerHTML += `
+        <div class="tech-row">
+          <div class="tech-name">${label}</div>
+          <div class="tech-val">$${v.toFixed(2)}</div>
+          <div class="tech-badge ${above ? 'bull' : 'bear'}">${above ? 'precio ↑' : 'precio ↓'}</div>
+        </div>`;
+    });
+
+    if (t.support) techList.innerHTML += `
+      <div class="tech-row">
+        <div class="tech-name">Soporte</div>
+        <div class="tech-val" style="color:var(--green);">$${parseFloat(t.support).toFixed(2)}</div>
+        <div class="tech-badge bull">clave</div>
+      </div>`;
+
+    if (t.resistance) techList.innerHTML += `
+      <div class="tech-row">
+        <div class="tech-name">Resistencia</div>
+        <div class="tech-val" style="color:var(--red);">$${parseFloat(t.resistance).toFixed(2)}</div>
+        <div class="tech-badge bear">clave</div>
+      </div>`;
+
+    if (t.trend) techList.innerHTML += `
+      <div class="tech-row">
+        <div class="tech-name">Tendencia</div>
+        <div class="tech-val" style="color:var(--text);font-size:10px;">${t.trend}</div>
+        <div class="tech-badge ${t.volumeSignal === 'alto' ? 'bull' : 'neu'}">vol ${t.volumeSignal || '—'}</div>
+      </div>`;
+
+    document.getElementById('techCard').style.display = 'block';
+  }
+
   // Update snapshot with prices from analysis response
   const allText = (data.summary || '') + ' ' + JSON.stringify(data.factors || '');
   let solP = data.solPrice || null;
@@ -696,8 +843,8 @@ MODO: ${modeLabel}
 FECHA/HORA ACTUAL: ${new Date().toLocaleString('es-MX', {timeZone: 'America/Mexico_City'})} hora CDMX
 
 TAREA:
-1. Busca en web: precio actual de SOL y BTC, noticias macro de las últimas 24h (Fed, CPI, inflación, geopolítica), y noticias específicas de Solana (outages, ETF flows, hacks).
-2. Analiza el contexto y genera una señal para el bot.
+1. Busca en web: precio actual de SOL y BTC, noticias macro últimas 24h (Fed, CPI, inflación, geopolítica), noticias de Solana (outages, ETF flows, hacks), Y análisis técnico de SOL: RSI 14, EMA 20/50/200, soportes y resistencias clave, volumen.
+2. Analiza todo el contexto y genera una señal para el bot.
 3. Responde ÚNICAMENTE con un JSON válido con esta estructura exacta (sin backticks, sin texto extra):
 
 {
@@ -717,6 +864,23 @@ TAREA:
   "riskLevel": "BAJO | MEDIO | ALTO",
   "score": 85,
   "shutdownConditions": "condiciones específicas para apagar el bot",
+  "gridParams": {
+    "low": 142.00,
+    "high": 195.00,
+    "grids": 30,
+    "spacing": "1.77"
+  },
+  "technicals": {
+    "rsi14": 54,
+    "rsiSignal": "sobrecomprado | sobrevendido | neutral",
+    "ema20": 158.40,
+    "ema50": 152.10,
+    "ema200": 145.00,
+    "trend": "descripción corta de la tendencia",
+    "support": 148.00,
+    "resistance": 175.00,
+    "volumeSignal": "alto | normal | bajo"
+  },
   "factors": [
     {"type": "pos|neg|neu", "icon": "emoji", "text": "descripción del factor en español"},
     {"type": "pos|neg|neu", "icon": "emoji", "text": "descripción del factor en español"},
@@ -729,6 +893,11 @@ Reglas para la señal:
 - PRECAUCION + Grid Normal si: mercado mixto, eventos en 2-5 días, BTC -2% a -4%
 - ON + Infinity Grid si: mercado alcista, BTC positivo, sin eventos macro en >7 días
 - ON + Grid Normal si: mercado lateral/neutral, sin eventos inmediatos pero contexto incierto
+
+Reglas para gridParams:
+- Infinity Grid: low = soporte más cercano o EMA50, high = null (pon 0 para indicar sin techo), grids = 20-25
+- Grid Normal: low = soporte fuerte, high = resistencia fuerte, grids = 25-40
+- spacing = (high - low) / grids redondeado a 2 decimales
 
 Responde SOLO el JSON.`;
 
