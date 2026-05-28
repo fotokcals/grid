@@ -28,7 +28,7 @@ export default async function handler(req, res) {
 
     // ── Open Orders (grid bot orders for SOL/USDT) ──
     const ordPath   = '/api/v1/trade/openOrders';
-    const ordParams = `symbol=SOL_USDT&timestamp=${timestamp}`;
+    const ordParams = `symbol=SOLUSDT&timestamp=${timestamp}`;
     const ordSig    = makeSign(apiSecret, 'GET', ordPath, ordParams);
 
     const ordRes  = await fetch(`https://api.pionex.com${ordPath}?${ordParams}`, {
@@ -38,7 +38,7 @@ export default async function handler(req, res) {
 
     // ── Order History (completed cycles) ──
     const histPath   = '/api/v1/trade/orderHistory';
-    const histParams = `symbol=SOL_USDT&limit=50&timestamp=${timestamp}`;
+    const histParams = `symbol=SOLUSDT&limit=50&timestamp=${timestamp}`;
     const histSig    = makeSign(apiSecret, 'GET', histPath, histParams);
 
     const histRes  = await fetch(`https://api.pionex.com${histPath}?${histParams}`, {

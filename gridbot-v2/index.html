@@ -769,7 +769,17 @@ async function fetchBotStatus() {
       }
       return;
     }
-    if (!data.bot) return;
+    if (!data.bot) {
+      // Show card with debug info to help diagnose
+      const card = document.getElementById('botStatusCard');
+      card.style.display = 'block';
+      document.getElementById('botStatusDot').textContent = '⚠ Sin órdenes';
+      document.getElementById('botStatusDot').style.cssText = 'font-family:var(--mono);font-size:9px;padding:2px 8px;border-radius:4px;background:var(--yd);color:var(--yellow);border:1px solid var(--yb);';
+      document.getElementById('botGridProfit').textContent = 'ordenes: ' + (data.debug?.openOrders ?? '?');
+      document.getElementById('botFloating').textContent   = data.debug?.ordMsg || 'OK';
+      document.getElementById('botRounds').textContent     = data.debug?.histMsg || '—';
+      return;
+    }
 
     const bot = data.bot;
     const card = document.getElementById('botStatusCard');
