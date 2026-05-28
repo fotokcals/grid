@@ -753,7 +753,23 @@ async function fetchBotStatus() {
   try {
     const res  = await fetch('/api/bot-status');
     const data = await res.json();
-    if (!data.connected || !data.bot) return;
+
+    // Show debug info if there's an error (helps fix API issues)
+    if (!data.connected) {
+      console.warn('Pionex bot-status:', data.error || data.debug);
+      if (data.debug) {
+        const card = document.getElementById('botStatusCard');
+        card.style.display = 'block';
+        card.style.borderColor = 'var(--rb)';
+        document.getElementById('botStatusDot').textContent = '✗ ERROR API';
+        document.getElementById('botStatusDot').style.cssText = 'font-family:var(--mono);font-size:9px;padding:2px 8px;border-radius:4px;background:var(--rd);color:var(--red);border:1px solid var(--rb);';
+        document.getElementById('botGridProfit').textContent  = data.debug.balMsg || '—';
+        document.getElementById('botFloating').textContent    = data.debug.botMsg || '—';
+        document.getElementById('botRounds').textContent      = 'debug';
+      }
+      return;
+    }
+    if (!data.bot) return;
 
     const bot = data.bot;
     const card = document.getElementById('botStatusCard');

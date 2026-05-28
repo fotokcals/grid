@@ -10,73 +10,86 @@ export default async function handler(req, res) {
   const apiSecret = process.env.PIONEX_API_SECRET;
 
   if (!apiKey || !apiSecret) {
-    return res.status(200).json({ connected: false, error: 'PIONEX keys not configured' });
+    return res.status(200).json({ connected: false, error: 'Keys not configured' });
   }
 
   try {
     const timestamp = Date.now().toString();
 
     // ── Balances ──
-    const balPath = '/api/v1/account/balances';
-    const balSig  = sign(apiKey, apiSecret, timestamp, 'GET', balPath, '');
-    const balRes  = await fetch(`https://api.pionex.com${balPath}`, {
-      headers: {
-        'PIONEX-KEY':       apiKey,
-        'PIONEX-SIGNATURE': balSig,
-        'timestamp':        timestamp,
-      },
+    const balPath    = '/api/v1/account/balances';
+    const balParams  = `timestamp=${timestamp}`;
+    const balSig     = makeSign(apiSecret, 'GET', balPath, balParams);
+
+    const balRes  = await fetch(`https://api.pionex.com${balPath}?${balParams}`, {
+      headers: pionexHeaders(apiKey, balSig),
     });
     const balData = await balRes.json();
 
-    // ── Open Grid Bot Orders ──
-    const botPath   = '/api/v1/trade/gridBot/openOrder';
-    const botParams = `symbol=SOL_USDT&timestamp=${timestamp}`;
-    const botSig    = sign(apiKey, apiSecret, timestamp, 'GET', botPath, botParams);
-    const botRes    = await fetch(`https://api.pionex.com${botPath}?${botParams}`, {
-      headers: {
-        'PIONEX-KEY':       apiKey,
-        'PIONEX-SIGNATURE': botSig,
-        'timestamp':        timestamp,
-      },
+    // ── Grid Bot Orders ──
+    const botPath    = '/api/v1/trade/gridBot/openOrder';
+    const botParams  = `symbol=SOL_USDT&timestamp=${timestamp}`;
+    const botSig     = makeSign(apiSecret, 'GET', botPath, botParams);
+
+    const botRes  = await fetch(`https://api.pionex.com${botPath}?${botParams}`, {
+      headers: pionexHeaders(apiKey, botSig),
     });
     const botData = await botRes.json();
 
-    // ── Extract useful fields ──
-    const balances = balData?.data?.balances || [];
-    const sol  = balances.find(b => b.coin === 'SOL');
-    const usdt = balances.find(b => b.coin === 'USDT');
+    // ── Debug: return raw if errors ──
+    const balOk = balData?.result === true || balData?.code === 0;
+    const botOk = botData?.result === true || botData?.code === 0;
 
-    const bots    = botData?.data?.orders || botData?.data || [];
-    const botList = Array.isArray(bots) ? bots : [];
+    if (!balOk || !botOk) {
+      return res.status(200).json({
+        connected: false,
+        debug: {
+          balMsg: balData?.message || balData?.msg || JSON.stringify(balData).substring(0,200),
+          botMsg: botData?.message || botData?.msg || JSON.stringify(botData).substring(0,200),
+        }
+      });
+    }
+
+    // ── Extract balances ──
+    const balances = balData?.data?.balances || [];
+    const sol  = balances.find(b => b.coin === 'SOL'  || b.asset === 'SOL');
+    const usdt = balances.find(b => b.coin === 'USDT' || b.asset === 'USDT');
+
+    // ── Extract bot ──
+    const orders  = botData?.data?.orders || botData?.data || [];
+    const botList = Array.isArray(orders) ? orders : Object.values(orders);
     const active  = botList[0] || null;
 
-    const result = {
+    return res.status(200).json({
       connected: true,
-      sol:  sol  ? parseFloat(sol.free  || 0) + parseFloat(sol.frozen  || 0) : null,
-      usdt: usdt ? parseFloat(usdt.free || 0) + parseFloat(usdt.frozen || 0) : null,
+      sol:  sol  ? +(parseFloat(sol.free  || sol.available || 0) + parseFloat(sol.frozen  || sol.locked || 0)).toFixed(4) : null,
+      usdt: usdt ? +(parseFloat(usdt.free || usdt.available || 0) + parseFloat(usdt.frozen || usdt.locked || 0)).toFixed(2) : null,
       bot: active ? {
-        symbol:       active.symbol,
-        gridProfit:   active.gridProfit   || active.grid_profit   || '0',
-        floatingPnl:  active.floatingPnl  || active.floating_pnl  || '0',
-        totalPnl:     active.totalPnl     || active.total_pnl     || '0',
-        rounds:       active.completedTimes || active.rounds || 0,
-        investment:   active.investment   || '0',
-        lower:        active.lowerPrice   || active.lower_price   || '—',
-        upper:        active.upperPrice   || active.upper_price   || '—',
-        grids:        active.gridCount    || active.grid_count    || '—',
-        running:      true,
+        gridProfit:  active.gridProfit  || active.grid_profit  || active.arbitrageProfit || '0',
+        floatingPnl: active.floatingPnl || active.floating_pnl || active.unrealizedProfit || '0',
+        totalPnl:    active.totalPnl    || active.total_pnl    || '0',
+        rounds:      active.completedTimes || active.filledCount || active.rounds || 0,
+        investment:  active.investment  || active.investmentAmount || '0',
+        lower:       active.lowerPrice  || active.lower_price  || active.lowerLimit || '—',
+        upper:       active.upperPrice  || active.upper_price  || active.upperLimit || '—',
+        grids:       active.gridCount   || active.grid_count   || active.gridNum    || '—',
       } : null,
-      raw: { balError: balData?.message, botError: botData?.message },
-    };
+    });
 
-    res.status(200).json(result);
   } catch (err) {
-    res.status(200).json({ connected: false, error: err.message });
+    return res.status(200).json({ connected: false, error: err.message });
   }
 }
 
-// ── Pionex HMAC-SHA256 Signature ──
-function sign(apiKey, apiSecret, timestamp, method, path, queryString) {
-  const payload = timestamp + method.toUpperCase() + path + (queryString ? '?' + queryString : '');
-  return crypto.createHmac('sha256', apiSecret).update(payload).digest('hex');
+function makeSign(secret, method, path, queryString) {
+  const message = `${method.toUpperCase()}${path}?${queryString}`;
+  return crypto.createHmac('sha256', secret).update(message).digest('hex');
+}
+
+function pionexHeaders(apiKey, signature) {
+  return {
+    'PIONEX-KEY':       apiKey,
+    'PIONEX-SIGNATURE': signature,
+    'Content-Type':     'application/json',
+  };
 }
