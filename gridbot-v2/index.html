@@ -411,33 +411,6 @@ body::before {
     <button class="restore-btn" onclick="restoreLastResult()">restaurar →</button>
   </div>
 
-  <!-- Bot Status Card (Pionex live data) -->
-  <div id="botStatusCard" style="display:none;background:var(--s1);border:1px solid var(--border);border-radius:16px;padding:16px;margin-bottom:16px;">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-      <div style="font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:.15em;color:var(--muted);">🤖 Mi bot en Pionex</div>
-      <div id="botStatusDot" style="font-family:var(--mono);font-size:9px;padding:2px 8px;border-radius:4px;background:var(--gd);color:var(--green);border:1px solid var(--gb);">● ACTIVO</div>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px;">
-      <div style="background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;">
-        <div style="font-family:var(--mono);font-size:8px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:4px;">Grid Profit</div>
-        <div id="botGridProfit" style="font-family:var(--mono);font-size:14px;font-weight:700;color:var(--green);">—</div>
-      </div>
-      <div style="background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;">
-        <div style="font-family:var(--mono);font-size:8px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:4px;">Flotante</div>
-        <div id="botFloating" style="font-family:var(--mono);font-size:14px;font-weight:700;color:var(--text);">—</div>
-      </div>
-      <div style="background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;">
-        <div style="font-family:var(--mono);font-size:8px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:4px;">Ciclos</div>
-        <div id="botRounds" style="font-family:var(--mono);font-size:14px;font-weight:700;color:var(--blue);">—</div>
-      </div>
-    </div>
-    <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--s2);border:1px solid var(--border);border-radius:8px;font-family:var(--mono);font-size:10px;color:var(--muted);">
-      <span>Rango actual:</span>
-      <span id="botRange" style="color:var(--text);font-weight:600;">—</span>
-      <span style="margin-left:auto;" id="botInvestment">—</span>
-    </div>
-  </div>
-
   <!-- Market snapshot -->
   <div class="snapshot">
     <div class="snap-card">
