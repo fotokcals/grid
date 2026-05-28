@@ -1100,21 +1100,24 @@ async function analyze(mode) {
     ? 'CONSULTA NOCTURNA (9 PM CDMX) — anticipar mañana y próximos días'
     : 'ANÁLISIS COMPLETO — señal inmediata con contexto macro completo';
 
-  const prompt = `Eres el asistente de un grid bot de trading para SOL/USDT en Pionex.
-El usuario tiene $500 en 1x sin apalancamiento. Puede usar Grid Normal o Infinity Grid.
+  const prompt = `Eres el asistente experto de un grid bot de trading para SOL/USDT en Pionex.
+El usuario tiene $454 invertidos en 1x sin apalancamiento. Grid Normal activo, rango $75–$91, 15 rejillas. Ya lleva 2 rondas completadas con ganancia de rejilla +$0.83 USDT.
 
 CONTEXTO DEL BOT:
-- Grid Normal: mejor en mercados laterales/bajistas, sin exposición direccional, rango ±8% aprox.
-- Infinity Grid: mejor en mercados alcistas, tiene posición en SOL (~50% del capital), sin techo superior
-- FOMC próximo: Jun 17-18 (alto impacto)
-- CPI próximo: ~Jun 11
+- Grid Normal: mejor en mercados laterales/bajistas, sin exposición direccional
+- Infinity Grid: mejor en mercados alcistas sostenidos, tiene posición en SOL (~50% capital), sin techo
+- FOMC próximo: Jun 17-18 2026 (alto impacto — en ~20 días)
+- CPI próximo: ~Jun 11 2026 (medio impacto — en ~14 días)
 
 MODO: ${modeLabel}
 FECHA/HORA ACTUAL: ${new Date().toLocaleString('es-MX', { timeZone: 'America/Mexico_City' })} hora CDMX
 
+⚠️ IMPORTANTE SOBRE LOS DATOS TÉCNICOS:
+Los precios, EMA, RSI, Bollinger Bands, ATR, soporte y resistencia ya fueron calculados con datos reales de Coinpaprika (200 velas diarias) y aparecen EN EL BLOQUE ANTERIOR a este prompt. USA ESOS VALORES EXACTOS — no inventes ni estimes técnicos. Solo busca en noticias lo que no está ya calculado.
+
 TAREA:
-1. Busca en web (Google Search): precio actual de SOL y BTC, noticias macro últimas 24h (Fed, CPI, inflación, geopolítica), noticias de Solana (outages, ETF flows, hacks), Y análisis técnico de SOL: RSI 14, EMA 20/50/200, soportes y resistencias clave, volumen, Bollinger Bands, ATR.
-2. Analiza todo el contexto y genera una señal para el bot.
+1. Las noticias macro y de Solana (últimas 24h) vienen inyectadas arriba. Úsalas directamente.
+2. Aplica las reglas de abajo usando los indicadores técnicos ya calculados.
 3. Responde ÚNICAMENTE con un JSON válido con esta estructura exacta (sin backticks, sin texto extra, sin markdown):
 
 {
@@ -1177,51 +1180,55 @@ TAREA:
   ]
 }
 
-PASO 1 — Determina el régimen de mercado usando técnicos:
-- ALCISTA: precio SOL > EMA20 > EMA50, RSI entre 50-70, BTC en verde → candidato Infinity Grid
-- LATERAL: precio SOL entre EMA20 y EMA50, RSI entre 40-60, sin tendencia clara → candidato Grid Normal
-- BAJISTA: precio SOL < EMA50, RSI < 45 o bajando, BTC en rojo → candidato PRECAUCION u OFF
-- INCERTIDUMBRE_MACRO: evento macro de alto impacto en menos de 5 días → override a PRECAUCION o OFF
+PASO 1 — Determina el régimen usando los valores calculados que ya tienes arriba (EMA20, EMA50, RSI14):
+- ALCISTA: precioSOL > EMA20 Y precioSOL > EMA50, RSI entre 50-70, BTC en verde → candidato Infinity Grid
+- LATERAL: precioSOL entre EMA20 y EMA50 (o cerca), RSI entre 35-60, sin tendencia clara → Grid Normal
+- BAJISTA: precioSOL < EMA50, RSI < 45 o bajando, BTC en rojo → PRECAUCION u OFF
+- INCERTIDUMBRE_MACRO: evento macro de alto impacto en < 5 días → override a PRECAUCION o OFF
 
-PASO 2 — Aplica estas reglas duras (tienen prioridad sobre técnicos):
-- OFF obligatorio si: FOMC/CPI en menos de 24h, BTC cae >4% en el día, outage de Solana activo, noticias hawkish extremas
-- PRECAUCION + Grid Normal si: evento macro en 2-5 días, BTC -2% a -4%, RSI >70 (sobrecomprado)
-- ON + Infinity Grid si: régimen ALCISTA confirmado por técnicos + macro sin eventos en >7 días
-- ON + Grid Normal si: régimen LATERAL o macro incierto pero técnicos no bearish
+PASO 2 — Reglas duras (prioridad máxima sobre técnicos):
+- OFF obligatorio: FOMC/CPI en < 24h, BTC cae > 4% en el día, outage Solana activo, noticia hawkish extrema de Fed
+- PRECAUCION + Grid Normal: evento macro en 2-5 días, BTC entre -2% y -4%, RSI > 70
+- ON + Infinity Grid: régimen ALCISTA confirmado + sin eventos macro en > 7 días
+- ON + Grid Normal: régimen LATERAL/BAJISTA suave o macro incierta pero técnicos no muy bearish
 
-Reglas para breakoutWarning — CRÍTICO para proteger el grid:
-- bollingerSqueeze: true si ancho de Bandas de Bollinger en mínimos de los últimos 10-14 días
-- atrCompressed: true si ATR 14 de SOL está por debajo de su media de los últimos 14 días
-- volumeAccumulating: true si el volumen lleva 2-3 días creciendo pero el precio no se mueve proporcionalmente
-- conditionsMet: cuántas de las 3 son true
-- risk: "ALTO" si conditionsMet >= 2, "MEDIO" si conditionsMet == 1, "BAJO" si 0
-- direction: "ALCISTA" si BTC fuerte + volumen comprando + precio en parte alta del rango. "BAJISTA" si BTC débil + precio en mínimos. "INDEFINIDO" si no hay señal clara.
-- note: si risk es ALTO, sé URGENTE: "⚠️ BB squeeze + ATR mínimos — NO abras grid nuevo hasta confirmar dirección"
+PASO 3 — breakoutWarning (usa los valores de BB width y ATR que ya calculaste):
+- bollingerSqueeze: usa el valor booleano ya calculado en el bloque técnico (BB width < 0.08)
+- atrCompressed: usa el valor booleano ya calculado (ATR actual < ATR promedio 14d)
+- volumeAccumulating: true si noticias/contexto sugieren acumulación silenciosa, false si no hay señal
+- conditionsMet: suma las que son true
+- risk: "ALTO" si >= 2, "MEDIO" si == 1, "BAJO" si 0
+- direction: "ALCISTA" si BTC fuerte + precio en parte alta del rango. "BAJISTA" si BTC débil + precio en mínimos. "INDEFINIDO" si sin señal clara.
+- note: si risk ALTO → urgente: "⚠️ BB squeeze + ATR comprimido — espera confirmación antes de abrir grid nuevo"
 
-Reglas para transitionTrigger:
-- adxStrong: true si ADX > 25
-- btcStrong: true si BTC lleva 2+ días en verde con momentum
-- solAboveEMAs: true si precio SOL > EMA20 Y > EMA50 simultáneamente
-- volumeGrowing: true si volumen reciente claramente mayor al promedio 7 días
-- conditionsMet: cuenta cuántas son true (0-4)
-- recommendation: "CAMBIAR" si conditionsMet >= 3, "VIGILAR" si == 2, "MANTENER" si <= 1
-- action: si CAMBIAR, escribe exactamente: "Apaga Grid Normal → Abre Infinity Grid con límite inferior en $X"
+PASO 4 — transitionTrigger (evalúa si conviene cambiar Grid Normal → Infinity):
+- adxStrong: true si mercado claramente en tendencia (no lateral), basado en noticias/momentum
+- btcStrong: true si BTC lleva 2+ días en verde con momentum real (no rebote de un día)
+- solAboveEMAs: usa los valores de EMA20 y EMA50 ya calculados → true si precioSOL > EMA20 Y > EMA50
+- volumeGrowing: true si volumen reciente claramente mayor al promedio según noticias/contexto
+- conditionsMet: suma las que son true (0-4)
+- recommendation: "CAMBIAR" si >= 3 → fase alcista confirmada. "VIGILAR" si == 2. "MANTENER" si <= 1
+- action: si CAMBIAR → "Apaga Grid Normal → Abre Infinity Grid con límite inferior en $X" (usa el soporte calculado)
 
-Reglas para gridParams:
-PASO A — Rango base según contexto macro:
-  - Sin eventos macro en 5 días → rango ±8% (low=precio×0.92, high=precio×1.08)
-  - Evento MEDIO en 2-5 días (CPI, NFP) → rango ±10% (low=precio×0.90, high=precio×1.10)
-  - Evento ALTO en < 3 días (FOMC, CPI sorpresa) → rango ±12% (low=precio×0.88, high=precio×1.12)
-  - Régimen BAJISTA → asimétrico: low=precio×0.88, high=precio×1.05
-PASO B — Ajusta con técnicos:
-  - Si soporte técnico fuerte → ancla el low en ese soporte
-  - Si resistencia fuerte → ancla el high en esa resistencia
-  - RSI > 70 → baja el high al nivel de resistencia más cercano
-  - RSI < 30 → sube el low al soporte más cercano por encima del low-base
-PASO C — grids = 15, spacing = (high-low)/15 redondeado a 2 decimales
-PASO D — rangeNote: 1 línea explicando el ajuste
+PASO 5 — gridParams (evalúa si el rango actual $75–$91 sigue siendo óptimo o propón ajuste):
+- Considera: el precio actual, los soportes/resistencias calculados, los eventos macro próximos
+- PASO A — Rango base:
+    Sin eventos en 5 días → ±8% del precio actual (low=precio×0.92, high=precio×1.08)
+    Evento MEDIO en 2-5 días → ±10% (low=precio×0.90, high=precio×1.10)
+    Evento ALTO en < 3 días → ±12% (low=precio×0.88, high=precio×1.12)
+    Régimen BAJISTA → asimétrico: low=precio×0.88, high=precio×1.05
+- PASO B — Ajusta con los soportes/resistencias ya calculados:
+    Ancla low en soporte calculado si está entre low-base y precio×0.97
+    Ancla high en resistencia calculada si está entre precio×1.02 y high-base
+    RSI > 70 → baja high a resistencia más cercana
+    RSI < 30 → sube low al soporte más cercano
+- PASO C — grids = 15, spacing = (high-low)/15 redondeado a 2 decimales
+- PASO D — rangeNote: 1 línea. Indica si el rango $75–$91 actual sigue siendo válido o recomienda ajuste (ej: "Rango actual $75–$91 válido. Nuevo óptimo: $74–$92 por soporte en $74.20")
 
-Responde SOLO el JSON, sin texto adicional.`;
+Para el campo "technicals" del JSON: USA LOS VALORES EXACTOS calculados que aparecen en el bloque técnico superior. No redondees, no estimes.
+Para "solPrice" y "btcPrice": usa los precios reales del bloque de precios superior.
+
+Responde SOLO el JSON, sin texto adicional, sin markdown.`;
 
   try {
     // Fetch live prices first

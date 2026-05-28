@@ -54,23 +54,47 @@ export default async function handler(req, res) {
         const resistance = Math.max(...recent20highs);
         const support    = Math.min(...recent20lows);
 
-        techBlock = `
-INDICADORES TÉCNICOS REALES (calculados de ${ohlcv.length} velas diarias):
-- Precio actual SOL: $${solPrice?.toFixed(2)}
-- EMA 20:  $${ema20.toFixed(2)}  → SOL ${solPrice > ema20 ? 'ENCIMA ↑ (alcista)' : 'DEBAJO ↓ (bajista)'}
-- EMA 50:  $${ema50.toFixed(2)}  → SOL ${solPrice > ema50 ? 'ENCIMA ↑ (alcista)' : 'DEBAJO ↓ (bajista)'}
-${ema200 ? `- EMA 200: $${ema200.toFixed(2)}  → SOL ${solPrice > ema200 ? 'ENCIMA ↑ (alcista)' : 'DEBAJO ↓ (bajista)'}` : ''}
-- RSI 14:  ${rsi14.toFixed(1)} → ${rsi14 > 70 ? 'SOBRECOMPRADO ⚠️' : rsi14 < 30 ? 'SOBREVENDIDO ⚠️' : 'NEUTRAL'}
-- Bollinger Bands (20): Upper $${bb.upper.toFixed(2)} | Middle $${bb.middle.toFixed(2)} | Lower $${bb.lower.toFixed(2)}
-- BB Width: ${(bb.width * 100).toFixed(2)}% ${bb.width < 0.08 ? '← SQUEEZE ⚠️ volatilidad comprimida' : '← normal'}
-- ATR 14:  $${atr14.toFixed(2)} ${atr14 < atrAvg ? '← COMPRIMIDO (debajo del promedio 14d)' : '← normal'}
-- ATR avg 14d: $${atrAvg.toFixed(2)}
-- Soporte reciente (20d): $${support.toFixed(2)}
-- Resistencia reciente (20d): $${resistance.toFixed(2)}
+        // Pre-compute regime signal
+        const solVsEma20 = solPrice > ema20 ? 'ENCIMA' : 'DEBAJO';
+        const solVsEma50 = solPrice > ema50 ? 'ENCIMA' : 'DEBAJO';
+        const solVsEma200 = ema200 ? (solPrice > ema200 ? 'ENCIMA' : 'DEBAJO') : 'N/A';
+        const regimeSuggestion = (solPrice > ema20 && solPrice > ema50 && rsi14 > 45 && rsi14 < 70)
+          ? 'ALCISTA (SOL sobre EMA20 y EMA50, RSI en zona sana)'
+          : (solPrice < ema50 || rsi14 < 40)
+          ? 'BAJISTA (SOL bajo EMA50 o RSI < 40)'
+          : 'LATERAL (señales mixtas, Grid Normal recomendado)';
 
-USA ESTOS VALORES EXACTOS para los campos ema20, ema50, ema200, rsi14, support, resistance del JSON.
-Para bollingerSqueeze: ${bb.width < 0.08 ? 'true' : 'false'} (BB width ${(bb.width*100).toFixed(2)}%)
-Para atrCompressed: ${atr14 < atrAvg ? 'true' : 'false'} (ATR $${atr14.toFixed(2)} vs avg $${atrAvg.toFixed(2)})
+        techBlock = `
+═══════════════════════════════════════════════════
+INDICADORES TÉCNICOS REALES — ${ohlcv.length} VELAS DIARIAS COINPAPRIKA
+USA ESTOS VALORES EXACTAMENTE EN EL JSON. NO LOS MODIFIQUES NI ESTIMES.
+═══════════════════════════════════════════════════
+Precio SOL:   $${solPrice?.toFixed(2)}
+EMA 20:       $${ema20.toFixed(2)}  → SOL ${solVsEma20} de EMA20 ${solPrice > ema20 ? '↑' : '↓'}
+EMA 50:       $${ema50.toFixed(2)}  → SOL ${solVsEma50} de EMA50 ${solPrice > ema50 ? '↑' : '↓'}
+${ema200 ? `EMA 200:      $${ema200.toFixed(2)}  → SOL ${solVsEma200} de EMA200 ${solPrice > ema200 ? '↑' : '↓'}` : 'EMA 200:      insuficientes datos'}
+RSI 14:       ${rsi14.toFixed(1)} → ${rsi14 > 70 ? '⚠️ SOBRECOMPRADO' : rsi14 < 30 ? '⚠️ SOBREVENDIDO' : rsi14 > 55 ? 'ALCISTA NEUTRO' : rsi14 < 45 ? 'BAJISTA NEUTRO' : 'NEUTRAL'}
+BB Upper:     $${bb.upper.toFixed(2)}
+BB Middle:    $${bb.middle.toFixed(2)}
+BB Lower:     $${bb.lower.toFixed(2)}
+BB Width:     ${(bb.width * 100).toFixed(2)}% → bollingerSqueeze = ${bb.width < 0.08 ? 'TRUE ⚠️ volatilidad comprimida' : 'false'}
+ATR 14:       $${atr14.toFixed(2)} → atrCompressed = ${atr14 < atrAvg ? 'TRUE ⚠️ ATR bajo su media' : 'false'}
+ATR avg 14d:  $${atrAvg.toFixed(2)}
+Soporte 20d:  $${support.toFixed(2)}
+Resistencia 20d: $${resistance.toFixed(2)}
+
+RÉGIMEN SUGERIDO POR TÉCNICOS: ${regimeSuggestion}
+
+VALORES OBLIGATORIOS PARA EL JSON:
+  technicals.ema20 = ${ema20.toFixed(2)}
+  technicals.ema50 = ${ema50.toFixed(2)}
+  technicals.ema200 = ${ema200 ? ema200.toFixed(2) : 'null'}
+  technicals.rsi14 = ${rsi14.toFixed(1)}
+  technicals.support = ${support.toFixed(2)}
+  technicals.resistance = ${resistance.toFixed(2)}
+  breakoutWarning.bollingerSqueeze = ${bb.width < 0.08 ? 'true' : 'false'}
+  breakoutWarning.atrCompressed = ${atr14 < atrAvg ? 'true' : 'false'}
+═══════════════════════════════════════════════════
 `;
       }
     } catch(e) { console.warn('Technicals error:', e.message); }
