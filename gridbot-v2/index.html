@@ -1047,7 +1047,7 @@ function renderResult(data) {
         </div>
         <div class="tech-badge ${rsiBadge}">${t.rsiSignal || '—'}</div>
       </div>`;
-    const price = parseFloat(data.solPrice) || 0;
+    const price = parseFloat((data.solPrice || '').toString().replace('$','')) || 0;
     [['EMA 20', t.ema20], ['EMA 50', t.ema50], ['EMA 200', t.ema200]].forEach(([label, val]) => {
       if (!val) return;
       const v = parseFloat(val);
